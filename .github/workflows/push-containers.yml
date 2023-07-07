@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 env:
-  image_name: ${{ secrets.REGISTRY_NAME }}/peto-main
+  front_image_name: ${{ secrets.REGISTRY_NAME }}/peto-main-front
 
 jobs:
   docker:
@@ -27,16 +27,16 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
           
-      - name: Extract metadata (tags, labels)
+      - name: Extract metadata (tags, labels) for front
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ${{ env.image_name }}
+          images: ${{ env.front_image_name }}
 
-      - name: Build and push Yew.rs
+      - name: Build and push front
         uses: docker/build-push-action@v4
         with:
-          context: ./frontend/rust/yew/
+          context: ./front
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

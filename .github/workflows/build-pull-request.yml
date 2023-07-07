@@ -19,8 +19,11 @@ jobs:
           with: 
             toolchain: stable
 
+        # front
         - name: Initialize rust cache
           uses: Swatinem/rust-cache@v2
+          with:
+            workspaces: ${{ github.workspace }}/front
 
         - name: Install wasm target
           run: rustup target add wasm32-unknown-unknown
@@ -28,11 +31,14 @@ jobs:
         - name: Install trunk
           run: cargo install trunk
 
-        - name: Build rust
+        - name: Build front
           run: cargo build
+          working-directory: ${{ github.workspace }}/front
 
         - name: Run rust tests
           run: cargo test
+          working-directory: ${{ github.workspace }}/front
 
         - name: Build trunk
           run: trunk build
+          working-directory: ${{ github.workspace }}/front
