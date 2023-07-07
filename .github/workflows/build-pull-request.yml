@@ -1,0 +1,38 @@
+name: 'Build pull request'
+
+on:
+  pull_request:
+    
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+    
+        steps:
+        - name: Checkout repository
+          uses: actions/checkout@v3
+          with:
+            fetch-depth: 0
+
+        - name: Install stable Cargo toolchain
+          uses: actions-rs/toolchain@v1.0.6
+          with: 
+            toolchain: stable
+
+        - name: Initialize rust cache
+          uses: Swatinem/rust-cache@v2
+
+        - name: Install wasm target
+          run: rustup target add wasm32-unknown-unknown
+
+        - name: Install trunk
+          run: cargo install trunk
+
+        - name: Build rust
+          run: cargo build
+
+        - name: Run rust tests
+          run: cargo test
+
+        - name: Build trunk
+          run: trunk build
