@@ -7,6 +7,7 @@ on:
 
 env:
   front_image_name: ${{ secrets.REGISTRY_NAME }}/peto-main-front
+  api_image_name: ${{ secrets.REGISTRY_NAME }}/peto-main-api
 
 jobs:
     push-to-registry:
@@ -31,6 +32,7 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
           
+      # front
       - name: Extract metadata (tags, labels) for front
         id: meta-front
         uses: docker/metadata-action@v4
@@ -44,3 +46,18 @@ jobs:
           push: true
           tags: ${{ steps.meta-front.outputs.tags }}
           labels: ${{ steps.meta-front.outputs.labels }}
+
+      # api
+      - name: Extract metadata (tags, labels) for api
+        id: meta-api
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.api_image_name }}
+
+      - name: Build and push front
+        uses: docker/build-push-action@v4
+        with:
+          context: ./front
+          push: true
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}

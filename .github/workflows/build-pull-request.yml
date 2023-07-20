@@ -35,10 +35,19 @@ jobs:
           run: cargo build
           working-directory: ${{ github.workspace }}/front
 
-        - name: Run rust tests
+        - name: Run rust tests front
           run: cargo test
           working-directory: ${{ github.workspace }}/front
 
         - name: Build trunk
           run: trunk build
           working-directory: ${{ github.workspace }}/front
+        
+        # api
+        - name: Build api
+          run: cargo build
+          working-directory: ${{ github.workspace }}/api
+
+        - name: Run rust tests api
+          run: cargo test
+          working-directory: ${{ github.workspace }}/api
