@@ -1,58 +1,14 @@
 use crate::{
     auth::validation::{create_token, Claims},
     controllers::controller::Controller,
+    models::{credentials::Credentials, password::Password, user::User},
 };
 use rocket::{
     futures::lock::Mutex, get, http::Status, post, response::status, routes, serde::json::Json,
     Build, State,
 };
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
-
-#[derive(Serialize, Deserialize)]
-struct Credentials {
-    name: String,
-    password: String,
-}
 
 pub struct UserData(pub Mutex<Vec<User>>);
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct User {
-    pub id: u32,
-    pub name: String,
-    #[serde(skip_serializing)]
-    pub password: Password,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct Password {
-    pub hash: String,
-    pub salt: String,
-}
-
-impl Password {
-    pub fn new(password: String) -> Self {
-        let mut rng = urandom::csprng();
-        let salt: [u8; 16] = rng.next();
-        let salt = salt.iter().map(|x| format!("{:x}", x)).collect::<String>();
-        let salty_password = password + &salt;
-        let mut hasher = Sha256::new();
-        hasher.update(&salty_password);
-        let result = hasher.finalize();
-        let hash = format!("{:x}", result);
-        Self { hash, salt }
-    }
-
-    pub fn verify(&self, password: String) -> bool {
-        let salty_password = password + &self.salt;
-        let mut hasher = Sha256::new();
-        hasher.update(&salty_password);
-        let result = hasher.finalize();
-        let hash = format!("{:x}", result);
-        self.hash == hash
-    }
-}
 
 pub struct UsersController;
 

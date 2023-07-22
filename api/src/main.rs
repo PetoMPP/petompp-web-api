@@ -12,16 +12,10 @@ fn rocket() -> _ {
     Extension(rocket::build())
         .add(UsersController)
         .into()
-        .mount("/", routes![index])
         .manage(Secrets::default())
         .configure(Config {
             port: 16969,
             address: "0.0.0.0".parse().unwrap(),
             ..Default::default()
         })
-}
-
-#[get("/")]
-fn index() -> &'static str {
-    "Hello, world!"
 }

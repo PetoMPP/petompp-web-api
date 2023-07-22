@@ -1,5 +1,5 @@
 use super::error::AuthError;
-use crate::{controllers::users::User, Secrets};
+use crate::{Secrets, models::user::User};
 use hmac::{digest::KeyInit, Hmac};
 use jwt::{SignWithKey, VerifyWithKey};
 use rocket::{
