@@ -12,4 +12,6 @@ jwt = "0.16"
 rocket = {version = "0.5.0-rc.3", features = ["json"]}
 serde = { version = "1.0", features = ["derive"] }
 sha2 = "0.10"
+strum = "0.25"
+strum_macros = "0.25"
 urandom = "0.1"

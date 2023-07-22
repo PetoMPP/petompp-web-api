@@ -1,21 +1,20 @@
-use super::error::AuthError;
-use crate::{Secrets, models::user::User};
-use hmac::{digest::KeyInit, Hmac};
-use jwt::{SignWithKey, VerifyWithKey};
+use super::{error::AuthError, token::validate_token};
+use crate::{
+    models::user::{Role, User},
+    Secrets,
+};
 use rocket::{
     http::Status,
     request::{FromRequest, Outcome},
     Request,
 };
-use serde::{Deserialize, Serialize};
-use sha2::Sha256;
 use std::{collections::BTreeMap, str::FromStr};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone)]
 pub struct Claims {
     pub sub: u32,
     pub exp: u64,
-    pub acs: u32,
+    pub acs: Role,
 }
 
 const SUB_CLAIM: &str = "sub";
@@ -64,7 +63,7 @@ impl Claims {
         Self {
             sub: user.id,
             exp: chrono::Utc::now().timestamp() as u64 + 60 * 60,
-            acs: 0,
+            acs: user.role,
         }
     }
 }
@@ -86,17 +85,4 @@ impl<'r> FromRequest<'r> for Claims {
         };
         Outcome::Success(claims)
     }
-}
-
-pub fn create_token(secrets: &Secrets, user: &User) -> Result<String, AuthError> {
-    let key: Hmac<Sha256> = Hmac::new_from_slice(secrets.api_secret.as_bytes()).unwrap();
-    let claims: BTreeMap<String, String> = Claims::new_from_user(user).into();
-    Ok(claims.sign_with_key(&key)?)
-}
-
-pub fn validate_token(secrets: &Secrets, token: &str) -> Result<Claims, AuthError> {
-    let key: Hmac<Sha256> = Hmac::new_from_slice(secrets.api_secret.as_bytes()).unwrap();
-    let token_data: BTreeMap<String, String> = token.verify_with_key(&key)?;
-
-    Claims::try_from(token_data)
 }

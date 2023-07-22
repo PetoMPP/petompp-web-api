@@ -1,2 +1,3 @@
+pub mod claims;
 pub mod error;
-pub mod validation;
+pub mod token;
