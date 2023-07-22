@@ -2,6 +2,11 @@ use super::error::AuthError;
 use crate::{controllers::users::User, Secrets};
 use hmac::{digest::KeyInit, Hmac};
 use jwt::{SignWithKey, VerifyWithKey};
+use rocket::{
+    http::Status,
+    request::{FromRequest, Outcome},
+    Request,
+};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use std::{collections::BTreeMap, str::FromStr};
@@ -61,6 +66,25 @@ impl Claims {
             exp: chrono::Utc::now().timestamp() as u64 + 60 * 60,
             acs: 0,
         }
+    }
+}
+
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for Claims {
+    type Error = ();
+
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, ()> {
+        let secrets = request.rocket().state::<Secrets>().unwrap();
+        let Some(token) = request.headers().get_one("Authorization") else {
+            return Outcome::Failure((Status::Unauthorized, ()));
+        };
+        let Some(token) = token.strip_prefix("Bearer ") else {
+            return Outcome::Failure((Status::Unauthorized, ()));
+        };
+        let Ok(claims) = validate_token(secrets, token) else {
+            return Outcome::Failure((Status::Unauthorized, ()));
+        };
+        Outcome::Success(claims)
     }
 }
 

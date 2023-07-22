@@ -1,7 +1,10 @@
-use crate::{controllers::controller::Controller, auth::validation::create_token};
+use crate::{
+    auth::validation::{create_token, Claims},
+    controllers::controller::Controller,
+};
 use rocket::{
-    futures::lock::Mutex, http::Status, post, response::status, routes, serde::json::Json, Build,
-    State,
+    futures::lock::Mutex, get, http::Status, post, response::status, routes, serde::json::Json,
+    Build, State,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -14,9 +17,11 @@ struct Credentials {
 
 pub struct UserData(pub Mutex<Vec<User>>);
 
+#[derive(Serialize, Deserialize, Clone)]
 pub struct User {
     pub id: u32,
     pub name: String,
+    #[serde(skip_serializing)]
     pub password: Password,
 }
 
@@ -57,7 +62,7 @@ impl Controller for UsersController {
     }
 
     fn routes(&self) -> Vec<rocket::Route> {
-        routes![create, login]
+        routes![create, login, get_self]
     }
 
     fn add_managed(&self, rocket: rocket::Rocket<Build>) -> rocket::Rocket<Build> {
@@ -97,12 +102,24 @@ async fn login(
             if user.password.verify(credentials.password.clone()) {
                 return match create_token(secrets, user) {
                     Ok(token) => status::Custom(Status::Ok, token),
-                    Err(_) => status::Custom(Status::InternalServerError, "Token creation failed!".to_string()),
+                    Err(e) => status::Custom(Status::InternalServerError, e.to_string()),
                 };
             } else {
                 status::Custom(Status::BadRequest, "Wrong password!".to_string())
             }
         }
         None => status::Custom(Status::BadRequest, "User does not exist!".to_string()),
+    };
+}
+
+#[get("/")]
+async fn get_self(
+    claims: Claims,
+    user_data: &State<UserData>,
+) -> status::Custom<Option<Json<User>>> {
+    let user_mutex = user_data.0.lock().await;
+    return match user_mutex.iter().find(|u| u.id == claims.sub) {
+        Some(user) => status::Custom(Status::Ok, Some(Json(user.clone()))),
+        None => status::Custom(Status::NotFound, None),
     };
 }
