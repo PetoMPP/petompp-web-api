@@ -1,6 +1,6 @@
 use petompp_web_api::{
     controllers::{controller::ControllerRegisterer, users::UsersController},
-    extensions::extension::Extension,
+    extensions::extension::Extension, Secrets,
 };
 use rocket::Config;
 
@@ -13,6 +13,7 @@ fn rocket() -> _ {
         .add(UsersController)
         .into()
         .mount("/", routes![index])
+        .manage(Secrets::default())
         .configure(Config {
             port: 16969,
             address: "0.0.0.0".parse().unwrap(),

@@ -10,6 +10,10 @@ impl ControllerRegisterer for Extension<Rocket<Build>> {
             true => format!("{}{}", PATH, path),
             false => format!("{}/{}", PATH, path),
         };
-        Extension(self.0.mount(path, controller.routes()))
+        Extension(
+            controller
+                .add_managed(self.0)
+                .mount(path, controller.routes()),
+        )
     }
 }
