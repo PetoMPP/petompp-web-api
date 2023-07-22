@@ -1,6 +1,7 @@
 use petompp_web_api::{
     controllers::{controller::ControllerRegisterer, users::UsersController},
-    extensions::extension::Extension, Secrets,
+    extensions::extension::Extension,
+    Secrets,
 };
 use rocket::Config;
 
