@@ -3,11 +3,7 @@ use crate::{
     models::user::{Role, User},
     Secrets,
 };
-use rocket::{
-    http::Status,
-    request::{FromRequest, Outcome},
-    Request,
-};
+use rocket::{http::Status, outcome::Outcome, request::FromRequest, Request};
 use std::{collections::BTreeMap, str::FromStr};
 
 #[derive(Clone)]
@@ -72,7 +68,7 @@ impl Claims {
 impl<'r> FromRequest<'r> for Claims {
     type Error = ();
 
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, ()> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, (Status, Self::Error), ()> {
         let secrets = request.rocket().state::<Secrets>().unwrap();
         let Some(token) = request.headers().get_one("Authorization") else {
             return Outcome::Failure((Status::Unauthorized, ()));
@@ -84,5 +80,22 @@ impl<'r> FromRequest<'r> for Claims {
             return Outcome::Failure((Status::Unauthorized, ()));
         };
         Outcome::Success(claims)
+    }
+}
+
+pub struct AdminClaims(Claims);
+
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for AdminClaims {
+    type Error = ();
+
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, (Status, Self::Error), ()> {
+        let Outcome::Success(claims) = request.guard::<Claims>().await else {
+            return Outcome::Failure((Status::Unauthorized, ()));
+        };
+        if claims.acs != Role::Admin {
+            return Outcome::Failure((Status::Unauthorized, ()));
+        }
+        Outcome::Success(Self(claims))
     }
 }

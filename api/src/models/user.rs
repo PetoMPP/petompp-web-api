@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use super::password::Password;
 use serde::{Deserialize, Serialize};
-use strum_macros::EnumString;
+use strum_macros::{EnumString, EnumIter};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct User {
@@ -14,7 +14,7 @@ pub struct User {
     pub confirmed: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, EnumString)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, EnumString, EnumIter, PartialEq)]
 pub enum Role {
     User,
     Admin,
