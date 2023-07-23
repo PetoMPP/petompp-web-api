@@ -1,8 +1,8 @@
-use std::env;
+use crate::controllers::controller::ControllerRegisterer;
 use crate::controllers::users::UsersController;
 use crate::extensions::extension::Extension;
-use crate::controllers::controller::ControllerRegisterer;
-use rocket::{Config, Rocket, Build};
+use rocket::{Build, Config, Rocket};
+use std::env;
 
 pub mod auth;
 pub mod controllers;

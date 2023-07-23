@@ -1,5 +1,8 @@
 use crate::{
-    auth::{claims::{Claims, AdminClaims}, token::create_token},
+    auth::{
+        claims::{AdminClaims, Claims},
+        token::create_token,
+    },
     controllers::controller::Controller,
     models::{
         credentials::Credentials,
@@ -95,7 +98,11 @@ async fn get_self(
 }
 
 #[post("/<id>/activate")]
-async fn activate(_claims: AdminClaims, id: u32, user_data: &State<UserData>) -> status::Custom<&'static str> {
+async fn activate(
+    _claims: AdminClaims,
+    id: u32,
+    user_data: &State<UserData>,
+) -> status::Custom<&'static str> {
     let mut user_mutex = user_data.0.lock().await;
     return match user_mutex.iter_mut().find(|user| user.id == id) {
         Some(user) => {

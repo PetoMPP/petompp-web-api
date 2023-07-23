@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use super::password::Password;
 use serde::{Deserialize, Serialize};
-use strum_macros::{EnumString, EnumIter};
+use strum_macros::{EnumIter, EnumString};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct User {
