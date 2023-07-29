@@ -1,3 +1,4 @@
+use chrono::{NaiveDate, NaiveTime};
 use petompp_web_api::{
     auth::token::create_token,
     models::{
@@ -20,6 +21,11 @@ fn activate_test() {
             password: Password::new("password".to_string()),
             role,
             confirmed: true,
+            created_at: chrono::NaiveDateTime::new(
+                NaiveDate::from_ymd_opt(2023, 07, 29).unwrap(),
+                NaiveTime::from_hms_opt(19, 05, 11).unwrap(),
+            ),
+            deleted_at: None,
         };
         let mut req = client.post("/api/v1/users/1/activate");
         req.add_header(Header::new(

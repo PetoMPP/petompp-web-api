@@ -1,7 +1,14 @@
+use std::io::Write;
+
+use diesel::{
+    backend::Backend, deserialize::FromSql, expression::AsExpression, pg::Pg, serialize::ToSql,
+    sql_types::Text,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, AsExpression)]
+#[diesel(sql_type = Text)]
 pub struct Password {
     hash: String,
     salt: String,
@@ -27,5 +34,42 @@ impl Password {
         let result = hasher.finalize();
         let hash = format!("{:x}", result);
         self.hash == hash
+    }
+}
+
+impl ToSql<Text, Pg> for Password {
+    fn to_sql<'b>(
+        &'b self,
+        out: &mut diesel::serialize::Output<'b, '_, Pg>,
+    ) -> diesel::serialize::Result {
+        out.write_all((self.hash.clone() + ":" + &self.salt).as_bytes())?;
+        Ok(diesel::serialize::IsNull::No)
+    }
+}
+
+impl FromSql<Text, Pg> for Password {
+    fn from_sql(bytes: <Pg as Backend>::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+        let all = bytes
+            .as_bytes()
+            .split(|x| *x == b':')
+            .map(|b| String::from_utf8(b.to_vec()).unwrap_or_default())
+            .collect::<Vec<String>>();
+
+        if all.len() != 2 {
+            return Err(Box::new(diesel::result::Error::DeserializationError(
+                "Invalid password format".into(),
+            )));
+        }
+
+        let (hash, salt) = match (all[0].as_str(), all[1].as_str()) {
+            ref x if x.0 == "" || x.1 == "" => {
+                return Err(Box::new(diesel::result::Error::DeserializationError(
+                    "Invalid password format".into(),
+                )))
+            }
+            _ => (all[0].clone(), all[1].clone()),
+        };
+
+        Ok(Self { hash, salt })
     }
 }

@@ -8,7 +8,7 @@ use std::{collections::BTreeMap, str::FromStr};
 
 #[derive(Clone)]
 pub struct Claims {
-    pub sub: u32,
+    pub sub: i32,
     pub exp: u64,
     pub acs: Role,
 }

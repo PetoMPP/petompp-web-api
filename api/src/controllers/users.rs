@@ -35,6 +35,8 @@ impl Controller for UsersController {
             password: Password::new("admin".to_string()),
             role: Role::Admin,
             confirmed: true,
+            created_at: chrono::Utc::now().naive_utc(),
+            deleted_at: None
         }])))
     }
 }
@@ -48,13 +50,15 @@ async fn create(
     return match user_mutex.iter().find(|user| user.name == credentials.name) {
         Some(_) => status::Custom(Status::BadRequest, "User already exists!"),
         None => {
-            let id = user_mutex.len() as u32 + 1;
+            let id = user_mutex.len() as i32 + 1;
             user_mutex.push(User {
                 id,
                 name: credentials.name.clone(),
                 password: Password::new(credentials.password.clone()),
                 role: Role::User,
                 confirmed: false,
+                created_at: chrono::Utc::now().naive_utc(),
+                deleted_at: None
             });
             status::Custom(Status::Ok, "User created!")
         }
@@ -100,7 +104,7 @@ async fn get_self(
 #[post("/<id>/activate")]
 async fn activate(
     _claims: AdminClaims,
-    id: u32,
+    id: i32,
     user_data: &State<UserData>,
 ) -> status::Custom<&'static str> {
     let mut user_mutex = user_data.0.lock().await;
