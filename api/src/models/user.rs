@@ -1,31 +1,28 @@
-use super::password::Password;
+use super::{credentials::Credentials, password::Password, role::Role};
 use crate::schema::users;
-use diesel::{prelude::*, AsExpression, sql_types::Integer};
+use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
-use strum_macros::{EnumIter, EnumString};
 
-#[derive(Queryable, Insertable, Serialize, Deserialize, Clone)]
+#[derive(Default, Queryable, Insertable, Serialize, Deserialize, Clone)]
 pub struct User {
-    pub id: i32,
+    #[diesel(deserialize_as = i32)]
+    pub id: Option<i32>,
     pub name: String,
     #[serde(skip_serializing)]
     pub password: Password,
     pub role: Role,
     pub confirmed: bool,
-    pub created_at: chrono::NaiveDateTime,
+    #[diesel(deserialize_as = chrono::NaiveDateTime)]
+    pub created_at: Option<chrono::NaiveDateTime>,
     pub deleted_at: Option<chrono::NaiveDateTime>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, EnumString, EnumIter, PartialEq, AsExpression)]
-#[diesel(sql_type = Integer)]
-pub enum Role {
-    User,
-    Admin,
-}
-
-impl Display for Role {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{:?}", self))
+impl From<Credentials> for User {
+    fn from(value: Credentials) -> Self {
+        Self {
+            name: value.name,
+            password: Password::new(value.password),
+            ..Default::default()
+        }
     }
 }

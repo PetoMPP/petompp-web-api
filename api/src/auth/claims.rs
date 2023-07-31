@@ -1,6 +1,6 @@
 use super::{error::AuthError, token::validate_token};
 use crate::{
-    models::user::{Role, User},
+    models::{role::Role, user::User},
     Secrets,
 };
 use rocket::{http::Status, outcome::Outcome, request::FromRequest, Request};
@@ -54,12 +54,17 @@ fn get_claim_value<T: FromStr>(
         .map_err(|_| AuthError::InvalidFormat(claim))
 }
 
-impl Claims {
-    pub fn new_from_user(user: &User) -> Self {
-        Self {
-            sub: user.id,
-            exp: chrono::Utc::now().timestamp() as u64 + 60 * 60,
-            acs: user.role,
+impl TryFrom<User> for Claims {
+    type Error = AuthError;
+
+    fn try_from(value: User) -> Result<Self, Self::Error> {
+        match value.id {
+            Some(id) => Ok(Self {
+                sub: id,
+                exp: chrono::Utc::now().timestamp() as u64 + 60 * 60,
+                acs: value.role,
+            }),
+            None => Err(AuthError::InvalidFormat("User id")),
         }
     }
 }

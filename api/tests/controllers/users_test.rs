@@ -1,10 +1,7 @@
 use chrono::{NaiveDate, NaiveTime};
 use petompp_web_api::{
     auth::token::create_token,
-    models::{
-        password::Password,
-        user::{Role, User},
-    },
+    models::{password::Password, role::Role, user::User},
     Secrets,
 };
 use rocket::{http::Header, local::blocking::Client};
@@ -16,15 +13,15 @@ fn activate_test() {
     let client = Client::untracked(rocket).unwrap();
     for role in Role::iter() {
         let user = User {
-            id: 1,
+            id: Some(1),
             name: "admin".to_string(),
             password: Password::new("password".to_string()),
             role,
             confirmed: true,
-            created_at: chrono::NaiveDateTime::new(
+            created_at: Some(chrono::NaiveDateTime::new(
                 NaiveDate::from_ymd_opt(2023, 07, 29).unwrap(),
                 NaiveTime::from_hms_opt(19, 05, 11).unwrap(),
-            ),
+            )),
             deleted_at: None,
         };
         let mut req = client.post("/api/v1/users/1/activate");

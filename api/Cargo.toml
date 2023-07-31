@@ -10,8 +10,12 @@ chrono = { version = "0.4", features = ["serde"] }
 diesel = { version = "2.0.0", features = ["postgres", "r2d2", "chrono"] }
 hmac = "0.12"
 jwt = "0.16"
+num-traits = "0.2"
+num-derive = "0.4"
 rocket = { version = "0.5.0-rc.3", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
+# Serde_json should be removed after creating response structs
+serde_json = "1.0"
 sha2 = "0.10"
 strum = "0.25"
 strum_macros = "0.25"

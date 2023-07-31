@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 
 pub fn create_token(secrets: &Secrets, user: &User) -> Result<String, AuthError> {
     let key: Hmac<Sha256> = Hmac::new_from_slice(secrets.api_secret.as_bytes()).unwrap();
-    let claims: BTreeMap<String, String> = Claims::new_from_user(user).into();
+    let claims: BTreeMap<String, String> = Claims::try_from(user.clone())?.into();
     Ok(claims.sign_with_key(&key)?)
 }
 
