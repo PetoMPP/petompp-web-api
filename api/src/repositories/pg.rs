@@ -6,6 +6,17 @@ use crate::{
     PgPool, Secrets,
 };
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
+use rocket::{async_trait, http::Status, outcome::Outcome, request::FromRequest, Request};
+
+#[async_trait]
+impl<'r> FromRequest<'r> for &'r dyn UserRepo {
+    type Error = ();
+
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, (Status, Self::Error), ()> {
+        let pool = request.guard::<&rocket::State<PgPool>>().await.unwrap();
+        Outcome::Success(pool.inner())
+    }
+}
 
 impl UserRepo for PgPool {
     fn create(&self, credentials: Credentials) -> Result<User, RepoError> {
@@ -32,11 +43,11 @@ impl UserRepo for PgPool {
             .optional()? else {
             return Err(RepoError::UserNotFound(credentials.name));
         };
-        if user.confirmed {
-            return Err(RepoError::UserNotConfirmed(credentials.name));
-        }
         if !user.password.verify(credentials.password.clone()) {
             return Err(RepoError::InvalidCredentials);
+        }
+        if user.confirmed {
+            return Err(RepoError::UserNotConfirmed(credentials.name));
         }
         Ok(create_token(secrets, &user)?)
     }

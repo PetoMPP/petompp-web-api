@@ -3,7 +3,6 @@ use crate::{
     controllers::controller::Controller,
     models::credentials::Credentials,
     repositories::repo::UserRepo,
-    PgPool,
 };
 use rocket::{get, http::Status, post, response::status, routes, serde::json::Json, Build, State};
 
@@ -24,7 +23,7 @@ impl Controller for UsersController {
 }
 
 #[post("/", data = "<credentials>")]
-async fn create(credentials: Json<Credentials>, pool: &State<PgPool>) -> status::Custom<String> {
+async fn create(credentials: Json<Credentials>, pool: &dyn UserRepo) -> status::Custom<String> {
     match pool.create(credentials.into_inner()) {
         Ok(user) => status::Custom(Status::Ok, serde_json::to_string_pretty(&user).unwrap()),
         Err(e) => e.into(),
@@ -34,7 +33,7 @@ async fn create(credentials: Json<Credentials>, pool: &State<PgPool>) -> status:
 #[post("/login", data = "<credentials>")]
 async fn login(
     credentials: Json<Credentials>,
-    pool: &State<PgPool>,
+    pool: &dyn UserRepo,
     secrets: &State<crate::Secrets>,
 ) -> status::Custom<String> {
     match pool.login(credentials.into_inner(), secrets) {
@@ -44,7 +43,7 @@ async fn login(
 }
 
 #[get("/")]
-async fn get_self(claims: Claims, pool: &State<PgPool>) -> status::Custom<String> {
+async fn get_self(claims: Claims, pool: &dyn UserRepo) -> status::Custom<String> {
     match pool.get_self(claims.sub) {
         Ok(user) => status::Custom(Status::Ok, serde_json::to_string_pretty(&user).unwrap()),
         Err(e) => e.into(),
@@ -52,7 +51,7 @@ async fn get_self(claims: Claims, pool: &State<PgPool>) -> status::Custom<String
 }
 
 #[post("/<id>/activate")]
-async fn activate(_claims: AdminClaims, id: i32, pool: &State<PgPool>) -> status::Custom<String> {
+async fn activate(_claims: AdminClaims, id: i32, pool: &dyn UserRepo) -> status::Custom<String> {
     match pool.activate(id) {
         Ok(_) => status::Custom(Status::Ok, "User activated!".to_string()),
         Err(e) => e.into(),

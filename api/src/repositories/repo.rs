@@ -1,11 +1,10 @@
-use rocket::{http, response::status};
-use std::fmt::Display;
-
 use crate::{
     auth::error::AuthError,
     models::{credentials::Credentials, user::User},
     Secrets,
 };
+use rocket::{http, response::status};
+use std::fmt::Display;
 
 #[derive(Debug)]
 pub enum RepoError {
@@ -24,38 +23,42 @@ impl Display for RepoError {
             RepoError::AuthError(e) => e.fmt(f),
             RepoError::DatabaseError(e) => e.fmt(f),
             RepoError::DatabaseConnectionError(e) => e.fmt(f),
-            RepoError::UserAlreadyExists(s) => f.write_fmt(format_args!("{:?}, {}", self, s)),
-            RepoError::UserNotFound(s) => f.write_fmt(format_args!("{:?}, {}", self, s)),
-            RepoError::InvalidCredentials => f.write_fmt(format_args!("{:?}", self)),
-            RepoError::UserNotConfirmed(s) => f.write_fmt(format_args!("{:?}, {}", self, s)),
+            RepoError::UserAlreadyExists(s) => {
+                f.write_fmt(format_args!("User ({}) already exists.", s))
+            }
+            RepoError::UserNotFound(s) => f.write_fmt(format_args!("User ({}) was not found.", s)),
+            RepoError::InvalidCredentials => f.write_str("Invalid credentials."),
+            RepoError::UserNotConfirmed(s) => {
+                f.write_fmt(format_args!("User ({}) is not confirmed", s))
+            }
         }
     }
 }
 
 impl Into<status::Custom<String>> for RepoError {
     fn into(self) -> status::Custom<String> {
-        match self {
+        match &self {
             RepoError::AuthError(e) => match e {
-                AuthError::JwtError(e) => {
-                    status::Custom(http::Status::InternalServerError, e.to_string())
+                AuthError::JwtError(_) => {
+                    status::Custom(http::Status::InternalServerError, self.to_string())
                 }
-                _ => status::Custom(http::Status::BadRequest, e.to_string()),
+                _ => status::Custom(http::Status::BadRequest, self.to_string()),
             },
-            RepoError::DatabaseError(e) => {
-                status::Custom(http::Status::InternalServerError, e.to_string())
+            RepoError::DatabaseError(_) => {
+                status::Custom(http::Status::InternalServerError, self.to_string())
             }
-            RepoError::DatabaseConnectionError(e) => {
-                status::Custom(http::Status::InternalServerError, e.to_string())
+            RepoError::DatabaseConnectionError(_) => {
+                status::Custom(http::Status::InternalServerError, self.to_string())
             }
-            RepoError::UserAlreadyExists(e) => {
-                status::Custom(http::Status::InternalServerError, e.to_string())
+            RepoError::UserAlreadyExists(_) => {
+                status::Custom(http::Status::BadRequest, self.to_string())
             }
-            RepoError::UserNotFound(e) => status::Custom(http::Status::NotFound, e.to_string()),
+            RepoError::UserNotFound(_) => status::Custom(http::Status::NotFound, self.to_string()),
             RepoError::InvalidCredentials => {
                 status::Custom(http::Status::Unauthorized, self.to_string())
             }
-            RepoError::UserNotConfirmed(e) => {
-                status::Custom(http::Status::PaymentRequired, e.to_string())
+            RepoError::UserNotConfirmed(_) => {
+                status::Custom(http::Status::PaymentRequired, self.to_string())
             }
         }
     }
@@ -81,7 +84,7 @@ impl From<AuthError> for RepoError {
 
 impl std::error::Error for RepoError {}
 
-pub trait UserRepo {
+pub trait UserRepo: Send + Sync {
     fn create(&self, credentials: Credentials) -> Result<User, RepoError>;
     fn login(&self, credentials: Credentials, secrets: &Secrets) -> Result<String, RepoError>;
     fn get_self(&self, user_id: i32) -> Result<User, RepoError>;
