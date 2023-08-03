@@ -12,6 +12,7 @@ hmac = "0.12"
 jwt = "0.16"
 num-traits = "0.2"
 num-derive = "0.4"
+r2d2 = "0.8"
 rocket = { version = "0.5.0-rc.3", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 # Serde_json should be removed after creating response structs

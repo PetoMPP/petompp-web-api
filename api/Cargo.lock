@@ -961,6 +961,7 @@ dependencies = [
  "jwt",
  "num-derive",
  "num-traits",
+ "r2d2",
  "rocket",
  "serde",
  "serde_json",

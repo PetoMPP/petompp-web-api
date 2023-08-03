@@ -12,6 +12,7 @@ pub mod auth;
 pub mod controllers;
 pub mod extensions;
 pub mod models;
+pub mod repositories;
 pub mod schema;
 
 pub type PgPool = Pool<ConnectionManager<PgConnection>>;
