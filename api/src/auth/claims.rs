@@ -17,12 +17,12 @@ const SUB_CLAIM: &str = "sub";
 const EXP_CLAIM: &str = "exp";
 const ACS_CLAIM: &str = "acs";
 
-impl Into<BTreeMap<String, String>> for Claims {
-    fn into(self) -> BTreeMap<String, String> {
+impl From<Claims> for BTreeMap<String, String> {
+    fn from(val: Claims) -> Self {
         let mut map = BTreeMap::new();
-        map.insert(SUB_CLAIM.to_string(), self.sub.to_string());
-        map.insert(EXP_CLAIM.to_string(), self.exp.to_string());
-        map.insert(ACS_CLAIM.to_string(), self.acs.to_string());
+        map.insert(SUB_CLAIM.to_string(), val.sub.to_string());
+        map.insert(EXP_CLAIM.to_string(), val.exp.to_string());
+        map.insert(ACS_CLAIM.to_string(), val.acs.to_string());
         map
     }
 }

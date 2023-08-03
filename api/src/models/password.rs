@@ -59,7 +59,7 @@ impl FromSql<Text, Pg> for Password {
         }
 
         let (hash, salt) = match (all[0], all[1]) {
-            ref x if x.0 == "" || x.1 == "" => {
+            ref x if x.0.is_empty() || x.1.is_empty() => {
                 return Err(Box::new(diesel::result::Error::DeserializationError(
                     "Invalid password format".into(),
                 )))

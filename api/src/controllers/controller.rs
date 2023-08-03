@@ -12,7 +12,7 @@ pub trait ControllerRegisterer {
 
 impl ControllerRegisterer for Rocket<Build> {
     fn add(self, controller: impl Controller) -> Self {
-        const PATH: &'static str = "/api/v1";
+        const PATH: &str = "/api/v1";
         let path = controller.path();
         let path = match path.starts_with('/') {
             true => format!("{}{}", PATH, path),

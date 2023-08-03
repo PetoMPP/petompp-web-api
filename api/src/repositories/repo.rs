@@ -36,30 +36,30 @@ impl Display for RepoError {
     }
 }
 
-impl Into<status::Custom<String>> for RepoError {
-    fn into(self) -> status::Custom<String> {
-        match &self {
+impl From<RepoError> for status::Custom<String> {
+    fn from(val: RepoError) -> Self {
+        match &val {
             RepoError::AuthError(e) => match e {
                 AuthError::JwtError(_) => {
-                    status::Custom(http::Status::InternalServerError, self.to_string())
+                    status::Custom(http::Status::InternalServerError, val.to_string())
                 }
-                _ => status::Custom(http::Status::BadRequest, self.to_string()),
+                _ => status::Custom(http::Status::BadRequest, val.to_string()),
             },
             RepoError::DatabaseError(_) => {
-                status::Custom(http::Status::InternalServerError, self.to_string())
+                status::Custom(http::Status::InternalServerError, val.to_string())
             }
             RepoError::DatabaseConnectionError(_) => {
-                status::Custom(http::Status::InternalServerError, self.to_string())
+                status::Custom(http::Status::InternalServerError, val.to_string())
             }
             RepoError::UserAlreadyExists(_) => {
-                status::Custom(http::Status::BadRequest, self.to_string())
+                status::Custom(http::Status::BadRequest, val.to_string())
             }
-            RepoError::UserNotFound(_) => status::Custom(http::Status::NotFound, self.to_string()),
+            RepoError::UserNotFound(_) => status::Custom(http::Status::NotFound, val.to_string()),
             RepoError::InvalidCredentials => {
-                status::Custom(http::Status::Unauthorized, self.to_string())
+                status::Custom(http::Status::Unauthorized, val.to_string())
             }
             RepoError::UserNotConfirmed(_) => {
-                status::Custom(http::Status::PaymentRequired, self.to_string())
+                status::Custom(http::Status::PaymentRequired, val.to_string())
             }
         }
     }
