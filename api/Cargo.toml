@@ -10,6 +10,7 @@ chrono = { version = "0.4", features = ["serde"] }
 diesel = { version = "2.0.0", features = ["postgres", "r2d2", "chrono"] }
 hmac = "0.12"
 jwt = "0.16"
+lazy_static = "1.4"
 num-traits = "0.2"
 num-derive = "0.4"
 r2d2 = "0.8"

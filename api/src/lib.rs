@@ -1,16 +1,15 @@
 use crate::controllers::controller::ControllerRegisterer;
 use crate::controllers::users::UsersController;
-use crate::extensions::extension::Extension;
 use diesel::{
     r2d2::{ConnectionManager, Pool},
     PgConnection,
 };
+use repositories::repo::UserRepo;
 use rocket::{Build, Config, Rocket};
 use std::env;
 
 pub mod auth;
 pub mod controllers;
-pub mod extensions;
 pub mod models;
 pub mod repositories;
 pub mod schema;
@@ -28,12 +27,11 @@ impl Default for Secrets {
     }
 }
 
-pub fn build_rocket() -> Rocket<Build> {
-    Extension(rocket::build())
+pub fn build_rocket(user_repo: &'static dyn UserRepo) -> Rocket<Build> {
+    rocket::build()
         .add(UsersController)
-        .into()
         .manage(Secrets::default())
-        .manage(get_connection_pool())
+        .manage(user_repo)
         .configure(Config {
             port: 16969,
             address: "0.0.0.0".parse().unwrap(),
@@ -41,7 +39,7 @@ pub fn build_rocket() -> Rocket<Build> {
         })
 }
 
-fn get_connection_pool() -> PgPool {
+pub fn get_connection_pool() -> PgPool {
     let url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let manager = ConnectionManager::<PgConnection>::new(url);
     Pool::builder()

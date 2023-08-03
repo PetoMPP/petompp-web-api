@@ -959,6 +959,7 @@ dependencies = [
  "diesel",
  "hmac",
  "jwt",
+ "lazy_static",
  "num-derive",
  "num-traits",
  "r2d2",

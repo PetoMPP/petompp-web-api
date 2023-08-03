@@ -3,6 +3,7 @@ use crate::{
     models::{credentials::Credentials, user::User},
     Secrets,
 };
+use rocket::{async_trait, http::Status, outcome::Outcome, request::FromRequest, Request};
 use rocket::{http, response::status};
 use std::fmt::Display;
 
@@ -89,4 +90,17 @@ pub trait UserRepo: Send + Sync {
     fn login(&self, credentials: Credentials, secrets: &Secrets) -> Result<String, RepoError>;
     fn get_self(&self, user_id: i32) -> Result<User, RepoError>;
     fn activate(&self, user_id: i32) -> Result<User, RepoError>;
+}
+
+#[async_trait]
+impl<'r> FromRequest<'r> for &'r dyn UserRepo {
+    type Error = ();
+
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, (Status, Self::Error), ()> {
+        let pool = request
+            .guard::<&rocket::State<&dyn UserRepo>>()
+            .await
+            .unwrap();
+        Outcome::Success(*pool.inner())
+    }
 }
