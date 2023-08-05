@@ -54,10 +54,10 @@ jobs:
         with:
           images: ${{ env.api_image_name }}
 
-      - name: Build and push front
+      - name: Build and push api
         uses: docker/build-push-action@v4
         with:
-          context: ./front
+          context: ./api
           push: true
           tags: ${{ steps.meta-api.outputs.tags }}
           labels: ${{ steps.meta-api.outputs.labels }}
