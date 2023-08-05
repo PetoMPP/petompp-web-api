@@ -1,63 +1,56 @@
 use super::repo::{RepoError, UserRepo};
-use crate::{
-    auth::token::create_token,
-    models::{credentials::Credentials, user::User},
-    schema::users,
-    PgPool, Secrets,
-};
+use crate::{models::user::User, schema::users, PgPool};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 impl UserRepo for PgPool {
-    fn create(&self, credentials: Credentials) -> Result<User, RepoError> {
+    fn create(&self, user: &User) -> Result<User, RepoError> {
         let mut conn = self.get()?;
-        if users::dsl::users
-            .filter(users::name.eq(&credentials.name))
-            .count()
-            .get_result::<i64>(&mut conn)?
-            > 0
-        {
-            return Err(RepoError::UserAlreadyExists(credentials.name));
-        }
-
-        Ok(diesel::insert_into(users::dsl::users)
-            .values(&User::from(credentials))
-            .get_result::<User>(&mut conn)?)
+        let user = diesel::insert_into(users::dsl::users)
+            .values(user)
+            .get_result::<User>(&mut conn)
+            .map_err(|e| unique_vol_as_user_exists(e, &*user.name))?;
+        Ok(user)
     }
 
-    fn login(&self, credentials: Credentials, secrets: &Secrets) -> Result<String, RepoError> {
+    fn get_by_name(&self, normalized_name: String) -> Result<User, RepoError> {
         let mut conn = self.get()?;
         let Some(user) = users::dsl::users
-            .filter(users::name.eq(&credentials.name))
+            .filter(users::normalized_name.eq(&normalized_name))
             .first::<User>(&mut conn)
             .optional()? else {
-            return Err(RepoError::UserNotFound(credentials.name));
-        };
-        if !user.password.verify(credentials.password.clone()) {
-            return Err(RepoError::InvalidCredentials);
-        }
-        if user.confirmed {
-            return Err(RepoError::UserNotConfirmed(credentials.name));
-        }
-        Ok(create_token(secrets, &user)?)
-    }
-
-    fn get_self(&self, user_id: i32) -> Result<User, RepoError> {
-        let mut conn = self.get()?;
-        let Some(user) = users::dsl::users
-            .filter(users::id.eq(user_id))
-            .first::<User>(&mut conn)
-            .optional()? else {
-            return Err(RepoError::UserNotFound(format!("ID: {}", user_id)));
+            return Err(RepoError::UserNotFound(normalized_name.to_string()));
         };
         Ok(user)
     }
 
-    fn activate(&self, user_id: i32) -> Result<User, RepoError> {
+    fn get_by_id(&self, id: i32) -> Result<User, RepoError> {
         let mut conn = self.get()?;
-        let Ok(user) = diesel::update(users::dsl::users.filter(users::id.eq(user_id)))
+        let Some(user) = users::dsl::users
+            .filter(users::id.eq(id))
+            .first::<User>(&mut conn)
+            .optional()? else {
+            return Err(RepoError::UserNotFound(format!("ID: {}", id)));
+        };
+        Ok(user)
+    }
+
+    fn activate(&self, id: i32) -> Result<User, RepoError> {
+        let mut conn = self.get()?;
+        let Some(user) = diesel::update(users::dsl::users.filter(users::id.eq(id)))
             .set(users::confirmed.eq(true))
-            .get_result::<User>(&mut conn) else {
-            return Err(RepoError::UserNotFound(format!("ID: {}", user_id)));
+            .get_result::<User>(&mut conn)
+            .optional()? else {
+            return Err(RepoError::UserNotFound(format!("ID: {}", id)));
         };
         Ok(user)
+    }
+}
+
+fn unique_vol_as_user_exists(e: diesel::result::Error, name: impl Into<String>) -> RepoError {
+    match e {
+        diesel::result::Error::DatabaseError(
+            diesel::result::DatabaseErrorKind::UniqueViolation,
+            _,
+        ) => RepoError::UserAlreadyExists(name.into()),
+        _ => RepoError::DatabaseError(e),
     }
 }

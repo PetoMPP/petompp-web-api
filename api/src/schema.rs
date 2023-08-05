@@ -6,6 +6,8 @@ diesel::table! {
         #[max_length = 255]
         name -> Varchar,
         #[max_length = 255]
+        normalized_name -> Varchar,
+        #[max_length = 255]
         password -> Varchar,
         role -> Int4,
         confirmed -> Bool,

@@ -1,9 +1,7 @@
-use crate::{
-    auth::error::AuthError,
-    models::{credentials::Credentials, user::User},
-    Secrets,
+use crate::{auth::error::AuthError, controllers::response::ApiResponse, models::user::User};
+use rocket::{
+    async_trait, http::Status, outcome::Outcome, request::FromRequest, serde::json::Json, Request,
 };
-use rocket::{async_trait, http::Status, outcome::Outcome, request::FromRequest, Request};
 use rocket::{http, response::status};
 use std::fmt::Display;
 
@@ -16,6 +14,25 @@ pub enum RepoError {
     UserNotFound(String),
     InvalidCredentials,
     UserNotConfirmed(String),
+    ValidationError(String),
+}
+
+impl RepoError {
+    pub fn status(&self) -> http::Status {
+        match self {
+            RepoError::AuthError(e) => match e {
+                AuthError::JwtError(_) => http::Status::InternalServerError,
+                _ => http::Status::BadRequest,
+            },
+            RepoError::DatabaseError(_) => http::Status::InternalServerError,
+            RepoError::DatabaseConnectionError(_) => http::Status::InternalServerError,
+            RepoError::UserAlreadyExists(_) => http::Status::BadRequest,
+            RepoError::UserNotFound(_) => http::Status::NotFound,
+            RepoError::InvalidCredentials => http::Status::Unauthorized,
+            RepoError::UserNotConfirmed(_) => http::Status::PaymentRequired,
+            RepoError::ValidationError(_) => http::Status::BadRequest,
+        }
+    }
 }
 
 impl Display for RepoError {
@@ -25,43 +42,22 @@ impl Display for RepoError {
             RepoError::DatabaseError(e) => e.fmt(f),
             RepoError::DatabaseConnectionError(e) => e.fmt(f),
             RepoError::UserAlreadyExists(s) => {
-                f.write_fmt(format_args!("User ({}) already exists.", s))
+                f.write_fmt(format_args!("User {} already exists.", s))
             }
             RepoError::UserNotFound(s) => f.write_fmt(format_args!("User ({}) was not found.", s)),
             RepoError::InvalidCredentials => f.write_str("Invalid credentials."),
             RepoError::UserNotConfirmed(s) => {
-                f.write_fmt(format_args!("User ({}) is not confirmed", s))
+                f.write_fmt(format_args!("User {} is not confirmed", s))
             }
+            RepoError::ValidationError(s) => f.write_str(s.as_str()),
         }
     }
 }
 
-impl From<RepoError> for status::Custom<String> {
-    fn from(val: RepoError) -> Self {
-        match &val {
-            RepoError::AuthError(e) => match e {
-                AuthError::JwtError(_) => {
-                    status::Custom(http::Status::InternalServerError, val.to_string())
-                }
-                _ => status::Custom(http::Status::BadRequest, val.to_string()),
-            },
-            RepoError::DatabaseError(_) => {
-                status::Custom(http::Status::InternalServerError, val.to_string())
-            }
-            RepoError::DatabaseConnectionError(_) => {
-                status::Custom(http::Status::InternalServerError, val.to_string())
-            }
-            RepoError::UserAlreadyExists(_) => {
-                status::Custom(http::Status::BadRequest, val.to_string())
-            }
-            RepoError::UserNotFound(_) => status::Custom(http::Status::NotFound, val.to_string()),
-            RepoError::InvalidCredentials => {
-                status::Custom(http::Status::Unauthorized, val.to_string())
-            }
-            RepoError::UserNotConfirmed(_) => {
-                status::Custom(http::Status::PaymentRequired, val.to_string())
-            }
-        }
+impl From<RepoError> for status::Custom<Json<ApiResponse<'_, String>>> {
+    fn from(value: RepoError) -> Self {
+        println!("Error: {:?}", value);
+        status::Custom(value.status(), Json(ApiResponse::err(value.to_string())))
     }
 }
 
@@ -86,10 +82,10 @@ impl From<AuthError> for RepoError {
 impl std::error::Error for RepoError {}
 
 pub trait UserRepo: Send + Sync {
-    fn create(&self, credentials: Credentials) -> Result<User, RepoError>;
-    fn login(&self, credentials: Credentials, secrets: &Secrets) -> Result<String, RepoError>;
-    fn get_self(&self, user_id: i32) -> Result<User, RepoError>;
-    fn activate(&self, user_id: i32) -> Result<User, RepoError>;
+    fn create(&self, user: &User) -> Result<User, RepoError>;
+    fn get_by_name(&self, normalized_name: String) -> Result<User, RepoError>;
+    fn get_by_id(&self, id: i32) -> Result<User, RepoError>;
+    fn activate(&self, id: i32) -> Result<User, RepoError>;
 }
 
 #[async_trait]
