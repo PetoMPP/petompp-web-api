@@ -16,21 +16,28 @@ pub mod schema;
 
 pub type PgPool = Pool<ConnectionManager<PgConnection>>;
 
+#[derive(Clone, Debug)]
 pub struct Secrets {
     pub api_secret: String,
+    pub database_url: String,
 }
 
 impl Default for Secrets {
     fn default() -> Self {
-        let api_secret = env::var("API_SECRET").unwrap_or("shhhdonttellanyoneaboutit".to_string());
-        Self { api_secret }
+        let api_secret = env::var("API_SECRET").expect("API_SECRET must be set");
+        let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+
+        Self {
+            api_secret,
+            database_url,
+        }
     }
 }
 
-pub fn build_rocket(user_repo: &'static dyn UserRepo) -> Rocket<Build> {
+pub fn build_rocket(secrets: &Secrets, user_repo: &'static dyn UserRepo) -> Rocket<Build> {
     rocket::build()
         .add(UsersController)
-        .manage(Secrets::default())
+        .manage(secrets.clone())
         .manage(user_repo)
         .configure(Config {
             port: 16969,
@@ -39,9 +46,8 @@ pub fn build_rocket(user_repo: &'static dyn UserRepo) -> Rocket<Build> {
         })
 }
 
-pub fn get_connection_pool() -> PgPool {
-    let url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let manager = ConnectionManager::<PgConnection>::new(url);
+pub fn get_connection_pool(secrets: &Secrets) -> PgPool {
+    let manager = ConnectionManager::<PgConnection>::new(secrets.database_url.clone());
     Pool::builder()
         .test_on_check_out(true)
         .build(manager)

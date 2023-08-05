@@ -56,7 +56,6 @@ impl Display for RepoError {
 
 impl From<RepoError> for status::Custom<Json<ApiResponse<'_, String>>> {
     fn from(value: RepoError) -> Self {
-        println!("Error: {:?}", value);
         status::Custom(value.status(), Json(ApiResponse::err(value.to_string())))
     }
 }
