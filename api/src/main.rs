@@ -19,5 +19,5 @@ fn rocket() -> _ {
         let mut conn = PgConnection::establish(&SECRETS.database_url).unwrap();
         conn.run_pending_migrations(MIGRATIONS).unwrap();
     }
-    build_rocket(&*SECRETS, &*USER_REPO)
+    build_rocket(&SECRETS, &*USER_REPO)
 }

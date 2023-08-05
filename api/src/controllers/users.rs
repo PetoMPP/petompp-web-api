@@ -57,8 +57,7 @@ async fn login<'a>(
     if user.confirmed {
         return Err(RepoError::UserNotConfirmed(credentials.name.to_string()).into());
     }
-    let token =
-        create_token(secrets, &user).map_err(|ae| <AuthError as Into<RepoError>>::into(ae))?;
+    let token = create_token(secrets, &user).map_err(<AuthError as Into<RepoError>>::into)?;
     Ok(Json(ApiResponse::ok(token)))
 }
 
