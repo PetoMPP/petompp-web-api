@@ -15,13 +15,24 @@ pub struct UserName(String);
 
 impl UserName {
     pub fn new(name: String) -> Result<Self, RepoError> {
+        let name = name.trim();
         validate_name(&name)?;
-        Ok(Self(name))
+        Ok(Self(name.to_string()))
     }
 }
 
 fn validate_name(name: &str) -> Result<(), RepoError> {
+    const MIN_LENGTH: usize = 3;
+    const MAX_LENGTH: usize = 28;
     const SPECIAL_CHARS: [char; 11] = ['-', '_', '.', '$', '@', '!', '#', '%', '^', '&', '*'];
+
+    if !(MIN_LENGTH..MAX_LENGTH).contains(&name.len()) {
+        return Err(RepoError::ValidationError(format!(
+            "Name must be between {} and {} characters long.",
+            MIN_LENGTH, MAX_LENGTH
+        )));
+    }
+    
     if !name
         .chars()
         .all(|c| c.is_alphanumeric() || SPECIAL_CHARS.contains(&c))

@@ -5,7 +5,11 @@ use diesel::{
     PgConnection,
 };
 use repositories::repo::UserRepo;
-use rocket::{Build, Config, Rocket};
+use rocket::{
+    fairing::{Fairing, Info, Kind},
+    http::Header,
+    Build, Config, Request, Response, Rocket,
+};
 use std::env;
 
 pub mod auth;
@@ -33,12 +37,31 @@ impl Default for Secrets {
         }
     }
 }
+pub struct CORS;
+
+#[rocket::async_trait]
+impl Fairing for CORS {
+    fn info(&self) -> Info {
+        Info {
+            name: "Add CORS headers to responses",
+            kind: Kind::Response,
+        }
+    }
+
+    async fn on_response<'r>(&self, _request: &'r Request<'_>, response: &mut Response<'r>) {
+        response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
+        response.set_header(Header::new("Access-Control-Allow-Methods", "*"));
+        response.set_header(Header::new("Access-Control-Allow-Headers", "*"));
+        response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
+    }
+}
 
 pub fn build_rocket(secrets: &Secrets, user_repo: &'static dyn UserRepo) -> Rocket<Build> {
     rocket::build()
         .add(UsersController)
         .manage(secrets.clone())
         .manage(user_repo)
+        .attach(CORS)
         .configure(Config {
             port: 16969,
             address: "0.0.0.0".parse().unwrap(),

@@ -10,6 +10,7 @@ use crate::{
     repositories::repo::{RepoError, UserRepo},
 };
 use rocket::{get, post, response::status, routes, serde::json::Json, Build, State};
+use serde::{Deserialize, Serialize};
 
 pub struct UsersController;
 
@@ -43,22 +44,27 @@ async fn create(
     Ok(Json(ApiResponse::ok(user)))
 }
 
+#[derive(Serialize, Deserialize)]
+struct LoginResponse {
+    token: String,
+    user: User,
+}
+
 #[post("/login", data = "<credentials>")]
 async fn login<'a>(
     credentials: Json<Credentials>,
     pool: &'a dyn UserRepo,
     secrets: &State<crate::Secrets>,
-) -> Result<Json<ApiResponse<'a, String>>, ApiError<'a>> {
-    let user_name = UserName::new(credentials.name.clone())?;
-    let user = pool.get_by_name(user_name.to_ascii_lowercase())?;
+) -> Result<Json<ApiResponse<'a, LoginResponse>>, ApiError<'a>> {
+    let user = pool.get_by_name(credentials.name.to_ascii_lowercase())?;
     if !user.password.verify(credentials.password.clone()) {
         return Err(RepoError::InvalidCredentials.into());
     }
-    if user.confirmed {
+    if !user.confirmed {
         return Err(RepoError::UserNotConfirmed(credentials.name.to_string()).into());
     }
     let token = create_token(secrets, &user).map_err(<AuthError as Into<RepoError>>::into)?;
-    Ok(Json(ApiResponse::ok(token)))
+    Ok(Json(ApiResponse::ok(LoginResponse {token, user})))
 }
 
 #[get("/")]

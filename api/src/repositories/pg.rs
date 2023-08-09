@@ -50,7 +50,7 @@ fn unique_vol_as_user_exists(e: diesel::result::Error, name: impl Into<String>) 
         diesel::result::Error::DatabaseError(
             diesel::result::DatabaseErrorKind::UniqueViolation,
             _,
-        ) => RepoError::UserAlreadyExists(name.into()),
+        ) => RepoError::UserNameTaken(name.into()),
         _ => RepoError::DatabaseError(e),
     }
 }

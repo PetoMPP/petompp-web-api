@@ -10,7 +10,7 @@ pub enum RepoError {
     AuthError(AuthError),
     DatabaseError(diesel::result::Error),
     DatabaseConnectionError(r2d2::Error),
-    UserAlreadyExists(String),
+    UserNameTaken(String),
     UserNotFound(String),
     InvalidCredentials,
     UserNotConfirmed(String),
@@ -26,7 +26,7 @@ impl RepoError {
             },
             RepoError::DatabaseError(_) => http::Status::InternalServerError,
             RepoError::DatabaseConnectionError(_) => http::Status::InternalServerError,
-            RepoError::UserAlreadyExists(_) => http::Status::BadRequest,
+            RepoError::UserNameTaken(_) => http::Status::BadRequest,
             RepoError::UserNotFound(_) => http::Status::NotFound,
             RepoError::InvalidCredentials => http::Status::Unauthorized,
             RepoError::UserNotConfirmed(_) => http::Status::PaymentRequired,
@@ -41,10 +41,10 @@ impl Display for RepoError {
             RepoError::AuthError(e) => e.fmt(f),
             RepoError::DatabaseError(e) => e.fmt(f),
             RepoError::DatabaseConnectionError(e) => e.fmt(f),
-            RepoError::UserAlreadyExists(s) => {
-                f.write_fmt(format_args!("User {} already exists.", s))
+            RepoError::UserNameTaken(s) => {
+                f.write_fmt(format_args!("Name {} is already in use.", s))
             }
-            RepoError::UserNotFound(s) => f.write_fmt(format_args!("User ({}) was not found.", s)),
+            RepoError::UserNotFound(s) => f.write_fmt(format_args!("User with {} was not found.", s)),
             RepoError::InvalidCredentials => f.write_str("Invalid credentials."),
             RepoError::UserNotConfirmed(s) => {
                 f.write_fmt(format_args!("User {} is not confirmed", s))
