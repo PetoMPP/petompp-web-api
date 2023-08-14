@@ -1,6 +1,15 @@
-use super::repo::{RepoError, UserRepo};
-use crate::{models::user::User, schema::users, PgPool};
+use super::query::UsersQuery;
+use crate::{
+    models::user::User,
+    repositories::{
+        query_config::QueryConfig,
+        repo::{RepoError, UserRepo},
+    },
+    schema::users,
+    PgPool,
+};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
+
 impl UserRepo for PgPool {
     fn create(&self, user: &User) -> Result<User, RepoError> {
         let mut conn = self.get()?;
@@ -31,6 +40,13 @@ impl UserRepo for PgPool {
             return Err(RepoError::UserNotFound(format!("ID: {}", id)));
         };
         Ok(user)
+    }
+
+    fn get_all(&self, query_config: &QueryConfig) -> Result<Vec<Vec<User>>, RepoError> {
+        let mut conn = self.get()?;
+        Ok(vec![query_config
+            .get_query()?
+            .get_results::<User>(&mut conn)?])
     }
 
     fn activate(&self, id: i32) -> Result<User, RepoError> {

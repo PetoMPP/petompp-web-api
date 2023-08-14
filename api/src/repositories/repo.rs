@@ -1,3 +1,4 @@
+use super::query_config::QueryConfig;
 use crate::{auth::error::AuthError, controllers::response::ApiResponse, models::user::User};
 use rocket::{
     async_trait, http::Status, outcome::Outcome, request::FromRequest, serde::json::Json, Request,
@@ -44,7 +45,9 @@ impl Display for RepoError {
             RepoError::UserNameTaken(s) => {
                 f.write_fmt(format_args!("Name {} is already in use.", s))
             }
-            RepoError::UserNotFound(s) => f.write_fmt(format_args!("User with {} was not found.", s)),
+            RepoError::UserNotFound(s) => {
+                f.write_fmt(format_args!("User with {} was not found.", s))
+            }
             RepoError::InvalidCredentials => f.write_str("Invalid credentials."),
             RepoError::UserNotConfirmed(s) => {
                 f.write_fmt(format_args!("User {} is not confirmed", s))
@@ -84,6 +87,7 @@ pub trait UserRepo: Send + Sync {
     fn create(&self, user: &User) -> Result<User, RepoError>;
     fn get_by_name(&self, normalized_name: String) -> Result<User, RepoError>;
     fn get_by_id(&self, id: i32) -> Result<User, RepoError>;
+    fn get_all(&self, query_config: &QueryConfig) -> Result<Vec<Vec<User>>, RepoError>;
     fn activate(&self, id: i32) -> Result<User, RepoError>;
 }
 

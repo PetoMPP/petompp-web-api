@@ -7,7 +7,10 @@ use crate::{
     },
     controllers::controller::Controller,
     models::{credentials::Credentials, role::Role, user::User},
-    repositories::repo::{RepoError, UserRepo},
+    repositories::{
+        query_config::QueryConfig,
+        repo::{RepoError, UserRepo},
+    },
 };
 use rocket::{get, post, response::status, routes, serde::json::Json, Build, State};
 use serde::{Deserialize, Serialize};
@@ -20,7 +23,7 @@ impl Controller for UsersController {
     }
 
     fn routes(&self) -> Vec<rocket::Route> {
-        routes![create, login, get_self, activate]
+        routes![create, login, get_self, activate, get_all]
     }
 
     fn add_managed(&self, rocket: rocket::Rocket<Build>) -> rocket::Rocket<Build> {
@@ -79,6 +82,16 @@ async fn get_self(
 ) -> Result<Json<ApiResponse<User>>, ApiError> {
     let user = pool.get_by_id(claims.sub)?;
     Ok(Json(ApiResponse::ok(user)))
+}
+
+#[get("/all?<query..>")]
+fn get_all(
+    _claims: AdminClaims,
+    query: QueryConfig,
+    pool: &dyn UserRepo,
+) -> Result<Json<ApiResponse<Vec<Vec<User>>>>, ApiError> {
+    let users = pool.get_all(&query)?;
+    Ok(Json(ApiResponse::ok(users)))
 }
 
 #[post("/<id>/activate")]
