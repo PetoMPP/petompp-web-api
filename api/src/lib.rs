@@ -1,11 +1,12 @@
-use crate::controllers::controller::ControllerRegisterer;
 use crate::controllers::users::UsersController;
+use crate::controllers::{controller::ControllerRegisterer, response::ApiResponse};
 use diesel::{
     r2d2::{ConnectionManager, Pool},
     PgConnection,
 };
 use repositories::repo::UserRepo;
-use rocket::{Build, Config, Rocket};
+use rocket::{catch, http::Status, serde::json::Json, Build, Config, Rocket};
+use rocket::{catchers, Request};
 use std::env;
 
 pub mod auth;
@@ -43,6 +44,7 @@ pub fn build_rocket(secrets: &Secrets, user_repo: &'static dyn UserRepo) -> Rock
     rocket::build()
         .add(UsersController)
         .mount("/", rocket_cors::catch_all_options_routes())
+        .register("/", catchers![error])
         .attach(cors.clone())
         .manage(cors)
         .manage(secrets.clone())
@@ -60,4 +62,12 @@ pub fn get_connection_pool(secrets: &Secrets) -> PgPool {
         .test_on_check_out(true)
         .build(manager)
         .expect("Failed to create pool")
+}
+
+#[catch(default)]
+fn error(status: Status, _req: &Request) -> Json<ApiResponse<'static, String>> {
+    Json(ApiResponse {
+        status: "error",
+        data: status.to_string(),
+    })
 }
