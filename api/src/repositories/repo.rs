@@ -89,6 +89,7 @@ pub trait UserRepo: Send + Sync {
     fn get_by_id(&self, id: i32) -> Result<User, RepoError>;
     fn get_all(&self, query_config: &QueryConfig) -> Result<Vec<Vec<User>>, RepoError>;
     fn activate(&self, id: i32) -> Result<User, RepoError>;
+    fn delete(&self, id: i32) -> Result<User, RepoError>;
 }
 
 #[async_trait]

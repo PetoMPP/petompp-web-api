@@ -12,7 +12,7 @@ use crate::{
         repo::{RepoError, UserRepo},
     },
 };
-use rocket::{get, post, response::status, routes, serde::json::Json, Build, State};
+use rocket::{get, post, response::status, routes, serde::json::Json, Build, State, delete};
 use serde::{Deserialize, Serialize};
 
 pub struct UsersController;
@@ -23,7 +23,7 @@ impl Controller for UsersController {
     }
 
     fn routes(&self) -> Vec<rocket::Route> {
-        routes![create, login, get_self, activate, get_all]
+        routes![create, login, get_self, activate, get_all, delete]
     }
 
     fn add_managed(&self, rocket: rocket::Rocket<Build>) -> rocket::Rocket<Build> {
@@ -101,5 +101,15 @@ async fn activate(
     pool: &dyn UserRepo,
 ) -> Result<Json<ApiResponse<User>>, ApiError> {
     let user = pool.activate(id)?;
+    Ok(Json(ApiResponse::ok(user)))
+}
+
+#[delete("/<id>")]
+async fn delete(
+    _claims: AdminClaims,
+    id: i32,
+    pool: &dyn UserRepo,
+) -> Result<Json<ApiResponse<User>>, ApiError> {
+    let user = pool.delete(id)?;
     Ok(Json(ApiResponse::ok(user)))
 }

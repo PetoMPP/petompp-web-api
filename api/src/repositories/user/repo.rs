@@ -59,6 +59,17 @@ impl UserRepo for PgPool {
         };
         Ok(user)
     }
+
+    fn delete(&self, id: i32) -> Result<User, RepoError> {
+        let mut conn = self.get()?;
+        let Some(user) = diesel::update(users::dsl::users.filter(users::id.eq(id)))
+            .set(users::deleted_at.eq(chrono::Utc::now().naive_utc()))
+            .get_result::<User>(&mut conn)
+            .optional()? else {
+            return Err(RepoError::UserNotFound(format!("ID: {}", id)));
+        };
+        Ok(user)
+    }
 }
 
 fn unique_vol_as_user_exists(e: diesel::result::Error, name: impl Into<String>) -> RepoError {
