@@ -1,7 +1,7 @@
 use crate::{
     models::resource_data::ResourceData, repositories::repo::RepoError, schema::resources, PgPool,
 };
-use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::{async_trait, http::Status, outcome::Outcome, request::FromRequest, Request};
 
 pub trait ResourcesRepo: Send + Sync {

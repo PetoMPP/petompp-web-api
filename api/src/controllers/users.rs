@@ -7,12 +7,9 @@ use crate::{
     },
     controllers::controller::Controller,
     models::{credentials::Credentials, role::Role, user::User},
-    repositories::{
-        query_config::QueryConfig,
-        repo::{RepoError, UserRepo},
-    },
+    repositories::{query_config::QueryConfig, repo::{RepoError, ApiError}, user::repo::UserRepo},
 };
-use rocket::{get, post, response::status, routes, serde::json::Json, Build, State, delete};
+use rocket::{delete, get, post, routes, serde::json::Json, Build, State};
 use serde::{Deserialize, Serialize};
 
 pub struct UsersController;
@@ -30,8 +27,6 @@ impl Controller for UsersController {
         rocket
     }
 }
-
-type ApiError<'a> = status::Custom<Json<ApiResponse<'a, String>>>;
 
 #[post("/", data = "<credentials>")]
 async fn create(
