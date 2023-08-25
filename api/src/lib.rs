@@ -4,7 +4,7 @@ use diesel::{
     r2d2::{ConnectionManager, Pool},
     PgConnection,
 };
-use repositories::repo::UserRepo;
+use repositories::user::repo::UserRepo;
 use rocket::{catch, http::Status, serde::json::Json, Build, Config, Rocket};
 use rocket::{catchers, Request};
 use std::env;
