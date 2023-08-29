@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::controller::Controller;
-use rocket::{delete, get, post, routes, serde::json::Json, Build};
+use rocket::{delete, get, post, routes, serde::json::Json, Build, put};
 
 pub struct ResourcesController;
 
@@ -36,7 +36,7 @@ async fn get<'a>(
     Ok(Json(ApiResponse::ok(pool.get(key, lang)?)))
 }
 
-#[post("/<key>", data = "<value>")]
+#[put("/<key>", data = "<value>")]
 async fn create<'a>(
     _admin_claims: AdminClaims,
     key: &'a str,

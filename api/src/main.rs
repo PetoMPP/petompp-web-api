@@ -13,11 +13,12 @@ fn rocket() -> _ {
     lazy_static! {
         static ref SECRETS: Secrets = Secrets::default();
         static ref USER_REPO: PgPool = get_connection_pool(&SECRETS);
+        static ref RESOURCES_REPO: PgPool = get_connection_pool(&SECRETS);
     }
 
     {
         let mut conn = PgConnection::establish(&SECRETS.database_url).unwrap();
         conn.run_pending_migrations(MIGRATIONS).unwrap();
     }
-    build_rocket(&SECRETS, &*USER_REPO)
+    build_rocket(&SECRETS, &*USER_REPO, &*RESOURCES_REPO)
 }
