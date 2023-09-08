@@ -3,6 +3,7 @@ use crate::{impl_query_config, schema::users};
 impl_query_config!(
     users::dsl::users,
     users::table,
+    users::BoxedQuery<'static, Pg>,
     UsersQuery,
     [
         (users::id, "id"),

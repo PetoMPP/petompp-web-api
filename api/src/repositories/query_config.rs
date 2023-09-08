@@ -167,22 +167,21 @@ impl<'r> FromFormField<'r> for PageRange {
 
 #[macro_export]
 macro_rules! impl_query_config {
-    ($dsl_table:expr, $table:ty, $type:ident, [$(($column:expr, $name:expr),)*]) => {
+    ($dsl_table:expr, $table:ty, $boxed:ty, $type:ident, [$(($column:expr, $name:expr),)*]) => {
         use crate::{
             repositories::{
                 query_config::{PageRange, QueryConfig, SortOrder},
                 repo::RepoError,
             },
-            schema::users::BoxedQuery,
         };
         use diesel::{pg::Pg, query_builder::QueryFragment, AppearsOnTable, ExpressionMethods, QueryDsl};
-        
+
         pub trait $type {
-            fn get_query(&self) -> Result<BoxedQuery<'static, Pg>, RepoError>;
+            fn get_query(&self) -> Result<$boxed, RepoError>;
         }
 
         impl $type for QueryConfig {
-            fn get_query(&self) -> Result<BoxedQuery<'static, Pg>, RepoError> {
+            fn get_query(&self) -> Result<$boxed, RepoError> {
                 match (
                     &self.range,
                     &self.items,
@@ -217,7 +216,7 @@ macro_rules! impl_query_config {
                     // Range with invalid item count and valid sort
                     | (PageRange::Range(_, _), None, Some(column), Some(order))
                      => {
-                        Ok(sort_users_by_column_str($dsl_table.into_boxed(), column.as_str(), &order)?)
+                        Ok(sort_by_column_str($dsl_table.into_boxed(), column.as_str(), &order)?)
                     }
                     // Single with valid item count
                     (PageRange::Single(i), Some(count), None, None)
@@ -226,16 +225,16 @@ macro_rules! impl_query_config {
                     | (PageRange::Single(i), Some(count), Some(_), None)
                      => {
                         if *i <= 0 {
-                            return Ok(users::dsl::users.limit(**count).into_boxed());
+                            return Ok($dsl_table.limit(**count).into_boxed());
                         }
                         Ok($dsl_table.limit(**count).offset(**count * *i).into_boxed())
                     }
                     // Single with valid item count and valid sort
                     (PageRange::Single(i), Some(count), Some(column), Some(order)) => {
                         if *i <= 0 {
-                            return Ok(sort_users_by_column_str($dsl_table.into_boxed(), column, order)?.limit(**count));
+                            return Ok(sort_by_column_str($dsl_table.into_boxed(), column, order)?.limit(**count));
                         }
-                        Ok(sort_users_by_column_str($dsl_table.into_boxed(), column, order)?.limit(**count).offset(**count * *i))
+                        Ok(sort_by_column_str($dsl_table.into_boxed(), column, order)?.limit(**count).offset(**count * *i))
                     }
                     // Range with valid item count
                     (PageRange::Range(start, end), Some(count), None, None)
@@ -253,19 +252,19 @@ macro_rules! impl_query_config {
                     (PageRange::Range(start, end), Some(count), Some(column), Some(sort)) => {
                         let pages = (end - start).max(0) + 1;
                         if *start <= 0 {
-                            return Ok(sort_users_by_column_str($dsl_table.into_boxed(), column.as_str(), &sort)?.limit(**count * pages));
+                            return Ok(sort_by_column_str($dsl_table.into_boxed(), column.as_str(), &sort)?.limit(**count * pages));
                         }
-                        Ok(sort_users_by_column_str($dsl_table.into_boxed(), column.as_str(), &sort)?.limit(**count * pages).offset(**count * start))
+                        Ok(sort_by_column_str($dsl_table.into_boxed(), column.as_str(), &sort)?.limit(**count * pages).offset(**count * start))
                     }
                 }
             }
         }
 
-        fn sort_users_by_column<U: 'static + Send + Sync + AppearsOnTable<$table>>(
-            query: BoxedQuery<'static, Pg>,
+        fn sort_by_column<U: 'static + Send + Sync + AppearsOnTable<$table>>(
+            query: $boxed,
             column: U,
             order: &SortOrder,
-        ) -> BoxedQuery<'static, Pg>
+        ) -> $boxed
         where
             U: ExpressionMethods + QueryFragment<Pg>,
         {
@@ -275,14 +274,14 @@ macro_rules! impl_query_config {
             }
         }
 
-        fn sort_users_by_column_str(
-            query: BoxedQuery<'static, Pg>,
+        fn sort_by_column_str(
+            query: $boxed,
             column: &str,
             order: &SortOrder,
-        ) -> Result<BoxedQuery<'static, Pg>, RepoError> {
+        ) -> Result<$boxed, RepoError> {
             match column {
                 $(
-                    $name => Ok(sort_users_by_column(query, $column, order)),
+                    $name => Ok(sort_by_column(query, $column, order)),
                 )*
                 _ => {
                     return Err(RepoError::ValidationError(format!(
