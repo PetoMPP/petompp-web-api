@@ -6,6 +6,7 @@ use rocket::{async_trait, http::Status, outcome::Outcome, request::FromRequest, 
 
 pub trait ResourcesRepo: Send + Sync {
     fn get(&self, key: &str, lang: &str) -> Result<String, RepoError>;
+    fn get_all(&self) -> Result<Vec<ResourceData>, RepoError>;
     fn create(&self, data: &ResourceData) -> Result<ResourceData, RepoError>;
     fn update(&self, data: &ResourceData) -> Result<ResourceData, RepoError>;
     fn delete(&self, key: &str) -> Result<(), RepoError>;
@@ -36,6 +37,12 @@ impl ResourcesRepo for PgPool {
             }
             "en" | _ => q.select(resources::en).get_result::<String>(&mut conn)?,
         };
+        Ok(res)
+    }
+
+    fn get_all(&self) -> Result<Vec<ResourceData>, RepoError> {
+        let mut conn = self.get()?;
+        let res = resources::dsl::resources.load::<ResourceData>(&mut conn)?;
         Ok(res)
     }
 

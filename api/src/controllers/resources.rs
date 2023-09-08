@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::controller::Controller;
-use rocket::{delete, get, post, routes, serde::json::Json, Build, put};
+use rocket::{delete, get, post, put, routes, serde::json::Json, Build};
 
 pub struct ResourcesController;
 
@@ -19,7 +19,7 @@ impl Controller for ResourcesController {
     }
 
     fn routes(&self) -> Vec<rocket::Route> {
-        routes![get, create, update, delete]
+        routes![get, get_all_keys, create, update, delete]
     }
 
     fn add_managed(&self, rocket: rocket::Rocket<Build>) -> rocket::Rocket<Build> {
@@ -34,6 +34,18 @@ async fn get<'a>(
     pool: &dyn ResourcesRepo,
 ) -> Result<Json<ApiResponse<'a, String>>, ApiError<'a>> {
     Ok(Json(ApiResponse::ok(pool.get(key, lang)?)))
+}
+
+#[get("/keys")]
+async fn get_all_keys<'a>(
+    pool: &dyn ResourcesRepo,
+) -> Result<Json<ApiResponse<'a, Vec<String>>>, ApiError<'a>> {
+    Ok(Json(ApiResponse::ok(
+        pool.get_all()?
+            .iter()
+            .map(|x| x.key.clone().unwrap())
+            .collect(),
+    )))
 }
 
 #[put("/<key>", data = "<value>")]
