@@ -1,11 +1,9 @@
 use crate::{
     auth::claims::AdminClaims,
     controllers::response::ApiResponse,
+    error::{ApiError, Error, ResourceDataValidationError, ValidationError},
     models::resource_data::ResourceData,
-    repositories::{
-        repo::{ApiError, RepoError},
-        resources::repo::ResourcesRepo,
-    },
+    repositories::resources::repo::ResourcesRepo,
 };
 
 use super::controller::Controller;
@@ -70,7 +68,13 @@ async fn update<'a>(
     pool: &dyn ResourcesRepo,
 ) -> Result<Json<ApiResponse<'a, ResourceData>>, ApiError<'a>> {
     if key != value.key.as_ref().unwrap().as_str() {
-        return Err(RepoError::ValidationError("Key mismatch.".to_string()).into());
+        return Err(Error::ValidationError(ValidationError::ResourceData(
+            ResourceDataValidationError::KeyMismatch(
+                key.to_string(),
+                value.key.as_ref().unwrap().clone(),
+            ),
+        ))
+        .into());
     }
     let value = ResourceData {
         key: Some(key.to_string()),

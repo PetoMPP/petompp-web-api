@@ -1,4 +1,4 @@
-use crate::repositories::repo::RepoError;
+use crate::error::{Error, ValidationError};
 use diesel::{
     backend::Backend, deserialize::FromSql, expression::AsExpression, pg::Pg, serialize::ToSql,
     sql_types::Text, FromSqlRow,
@@ -15,8 +15,8 @@ pub struct Password {
 }
 
 impl Password {
-    pub fn new(password: String) -> Result<Self, RepoError> {
-        validate_password(&password)?;
+    pub fn new(password: String) -> Result<Self, Error> {
+        PasswordRequirements::default().validate(&password)?;
         let mut rng = urandom::csprng();
         let salt: [u8; 16] = rng.next();
         let salt = salt.iter().map(|x| format!("{:x}", x)).collect::<String>();
@@ -36,37 +36,6 @@ impl Password {
         let hash = format!("{:x}", result);
         self.hash == hash
     }
-}
-
-fn validate_password(password: &str) -> Result<(), RepoError> {
-    // password should be at least 8 characters long and contain at least 3 of:
-    // one number, one uppercase letter, one lowercase letter, and one special character.
-    const MIN_PASSES: usize = 3;
-
-    if password.len() < 8 {
-        return Err(RepoError::ValidationError(
-            "Password must be at least 8 characters long.".to_string(),
-        ));
-    }
-    let checks = vec![
-        |s: &str| s.chars().any(|c| c.is_numeric()),
-        |s: &str| s.chars().any(|c| c.is_lowercase()),
-        |s: &str| s.chars().any(|c| c.is_uppercase()),
-        |s: &str| s.chars().any(|c| !c.is_alphanumeric()),
-    ];
-
-    let mut passed = 0;
-    for check in checks {
-        if check(password) {
-            passed += 1;
-        }
-        if passed >= MIN_PASSES {
-            return Ok(());
-        }
-    }
-    Err(RepoError::ValidationError(
-            "Password must contain at least 3 of the following: one number, one uppercase letter, one lowercase letter, and one special character.".to_string(),
-        ))
 }
 
 impl ToSql<Text, Pg> for Password {
@@ -100,5 +69,53 @@ impl FromSql<Text, Pg> for Password {
         };
 
         Ok(Self { hash, salt })
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct PasswordRequirements {
+    pub min_length: i32,
+    pub passes_required: i32,
+    pub numbers: bool,
+    pub uppercase: bool,
+    pub lowercase: bool,
+    pub special: bool,
+}
+
+impl PasswordRequirements {
+    pub fn validate(&self, password: &str) -> Result<(), Error> {
+        if password.len() < self.min_length as usize {
+            return Err(Error::ValidationError(ValidationError::Password(*self)));
+        }
+        let checks: Vec<Box<dyn Fn(&str) -> bool>> = vec![
+            Box::new(|s: &str| self.numbers && s.chars().any(|c| c.is_numeric())),
+            Box::new(|s: &str| self.uppercase && s.chars().any(|c| c.is_uppercase())),
+            Box::new(|s: &str| self.lowercase && s.chars().any(|c| c.is_lowercase())),
+            Box::new(|s: &str| self.special && s.chars().any(|c| !c.is_alphanumeric())),
+        ];
+
+        let mut passed = 0;
+        for check in checks {
+            if check(password) {
+                passed += 1;
+            }
+            if passed >= self.passes_required as usize {
+                return Ok(());
+            }
+        }
+        Err(Error::ValidationError(ValidationError::Password(*self)))
+    }
+}
+
+impl Default for PasswordRequirements {
+    fn default() -> Self {
+        Self {
+            min_length: 8,
+            passes_required: 3,
+            numbers: true,
+            uppercase: true,
+            lowercase: true,
+            special: true,
+        }
     }
 }

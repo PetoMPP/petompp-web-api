@@ -171,17 +171,17 @@ macro_rules! impl_query_config {
         use crate::{
             repositories::{
                 query_config::{PageRange, QueryConfig, SortOrder},
-                repo::RepoError,
             },
+            error::{Error, ValidationError, QueryValidationError},
         };
         use diesel::{pg::Pg, query_builder::QueryFragment, AppearsOnTable, ExpressionMethods, QueryDsl};
 
         pub trait $type {
-            fn get_query(&self) -> Result<$boxed, RepoError>;
+            fn get_query(&self) -> Result<$boxed, Error>;
         }
 
         impl $type for QueryConfig {
-            fn get_query(&self) -> Result<$boxed, RepoError> {
+            fn get_query(&self) -> Result<$boxed, Error> {
                 match (
                     &self.range,
                     &self.items,
@@ -278,15 +278,14 @@ macro_rules! impl_query_config {
             query: $boxed,
             column: &str,
             order: &SortOrder,
-        ) -> Result<$boxed, RepoError> {
+        ) -> Result<$boxed, Error> {
             match column {
                 $(
                     $name => Ok(sort_by_column(query, $column, order)),
                 )*
                 _ => {
-                    return Err(RepoError::ValidationError(format!(
-                        "Invalid column: {}",
-                        column
+                    return Err(Error::ValidationError(ValidationError::Query(
+                        QueryValidationError::InvalidColumn(column.to_string()),
                     )))
                 }
             }

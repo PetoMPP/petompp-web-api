@@ -12,6 +12,7 @@ use std::env;
 
 pub mod auth;
 pub mod controllers;
+pub mod error;
 pub mod models;
 pub mod repositories;
 pub mod schema;
@@ -46,7 +47,7 @@ pub fn build_rocket(secrets: &Secrets, user_repo: &'static dyn UserRepo, resourc
         .add(UsersController)
         .add(ResourcesController)
         .mount("/", rocket_cors::catch_all_options_routes())
-        .register("/", catchers![error])
+        .register("/", catchers![err])
         .attach(cors.clone())
         .manage(cors)
         .manage(secrets.clone())
@@ -68,7 +69,7 @@ pub fn get_connection_pool(secrets: &Secrets) -> PgPool {
 }
 
 #[catch(default)]
-fn error(status: Status, _req: &Request) -> Json<ApiResponse<'static, String>> {
+fn err(status: Status, _req: &Request) -> Json<ApiResponse<'static, String>> {
     Json(ApiResponse {
         status: "error",
         data: status.to_string(),

@@ -1,4 +1,4 @@
-use crate::repositories::repo::RepoError;
+use crate::error::{Error, UsernameValidationError, ValidationError};
 use deref_derive::{Deref, DerefMut};
 use diesel::{
     backend::Backend, deserialize::FromSql, pg::Pg, serialize::ToSql, sql_types::Text,
@@ -14,32 +14,31 @@ use std::io::Write;
 pub struct UserName(String);
 
 impl UserName {
-    pub fn new(name: String) -> Result<Self, RepoError> {
+    pub fn new(name: String) -> Result<Self, Error> {
         let name = name.trim();
         validate_name(&name)?;
         Ok(Self(name.to_string()))
     }
 }
 
-fn validate_name(name: &str) -> Result<(), RepoError> {
+fn validate_name(name: &str) -> Result<(), Error> {
     const MIN_LENGTH: usize = 3;
     const MAX_LENGTH: usize = 28;
     const SPECIAL_CHARS: [char; 11] = ['-', '_', '.', '$', '@', '!', '#', '%', '^', '&', '*'];
 
     if !(MIN_LENGTH..MAX_LENGTH).contains(&name.len()) {
-        return Err(RepoError::ValidationError(format!(
-            "Name must be between {} and {} characters long.",
-            MIN_LENGTH, MAX_LENGTH
+        return Err(Error::ValidationError(ValidationError::Username(
+            UsernameValidationError::InvalidLength(MIN_LENGTH as i32, MAX_LENGTH as i32),
         )));
     }
-    
+
     if !name
         .chars()
         .all(|c| c.is_alphanumeric() || SPECIAL_CHARS.contains(&c))
     {
-        return Err(RepoError::ValidationError(
-            "Name must be alphanumeric with special characters: - _ . $ @ ! # % ^ & *".to_string(),
-        ));
+        return Err(Error::ValidationError(ValidationError::Username(
+            UsernameValidationError::InvalidCharacters(SPECIAL_CHARS.to_vec()),
+        )));
     }
     Ok(())
 }

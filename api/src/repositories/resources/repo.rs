@@ -1,15 +1,18 @@
 use crate::{
-    models::resource_data::ResourceData, repositories::repo::RepoError, schema::resources, PgPool,
+    error::{Error, ResourceDataValidationError, ValidationError},
+    models::resource_data::ResourceData,
+    schema::resources,
+    PgPool,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::{async_trait, http::Status, outcome::Outcome, request::FromRequest, Request};
 
 pub trait ResourcesRepo: Send + Sync {
-    fn get(&self, key: &str, lang: &str) -> Result<String, RepoError>;
-    fn get_all(&self) -> Result<Vec<ResourceData>, RepoError>;
-    fn create(&self, data: &ResourceData) -> Result<ResourceData, RepoError>;
-    fn update(&self, data: &ResourceData) -> Result<ResourceData, RepoError>;
-    fn delete(&self, key: &str) -> Result<(), RepoError>;
+    fn get(&self, key: &str, lang: &str) -> Result<String, Error>;
+    fn get_all(&self) -> Result<Vec<ResourceData>, Error>;
+    fn create(&self, data: &ResourceData) -> Result<ResourceData, Error>;
+    fn update(&self, data: &ResourceData) -> Result<ResourceData, Error>;
+    fn delete(&self, key: &str) -> Result<(), Error>;
 }
 
 #[async_trait]
@@ -25,7 +28,7 @@ impl<'r> FromRequest<'r> for &'r dyn ResourcesRepo {
 }
 
 impl ResourcesRepo for PgPool {
-    fn get(&self, key: &str, lang: &str) -> Result<String, RepoError> {
+    fn get(&self, key: &str, lang: &str) -> Result<String, Error> {
         let mut conn = self.get()?;
         let q = resources::dsl::resources.filter(resources::key.eq(key));
         let res = match lang {
@@ -40,13 +43,13 @@ impl ResourcesRepo for PgPool {
         Ok(res)
     }
 
-    fn get_all(&self) -> Result<Vec<ResourceData>, RepoError> {
+    fn get_all(&self) -> Result<Vec<ResourceData>, Error> {
         let mut conn = self.get()?;
         let res = resources::dsl::resources.load::<ResourceData>(&mut conn)?;
         Ok(res)
     }
 
-    fn create(&self, data: &ResourceData) -> Result<ResourceData, RepoError> {
+    fn create(&self, data: &ResourceData) -> Result<ResourceData, Error> {
         let mut conn = self.get()?;
         let res = diesel::insert_into(resources::dsl::resources)
             .values(data)
@@ -54,12 +57,14 @@ impl ResourcesRepo for PgPool {
         Ok(res)
     }
 
-    fn update(&self, data: &ResourceData) -> Result<ResourceData, RepoError> {
+    fn update(&self, data: &ResourceData) -> Result<ResourceData, Error> {
         let mut conn = self.get()?;
         let key = data
             .key
             .clone()
-            .ok_or(RepoError::ValidationError("Key is required.".to_string()))?;
+            .ok_or(Error::ValidationError(ValidationError::ResourceData(
+                ResourceDataValidationError::KeyMissing,
+            )))?;
         let res = match (&data.en, &data.pl) {
             (Some(en), Some(pl)) => diesel::update(resources::dsl::resources)
                 .filter(resources::dsl::key.eq(key))
@@ -73,12 +78,16 @@ impl ResourcesRepo for PgPool {
                 .filter(resources::dsl::key.eq(key))
                 .set(resources::dsl::pl.eq(pl))
                 .get_result::<ResourceData>(&mut conn)?,
-            _ => return Err(RepoError::ValidationError("Nothing to update.".to_string())),
+            _ => {
+                return Err(Error::ValidationError(ValidationError::ResourceData(
+                    ResourceDataValidationError::ValueMissing,
+                )))
+            }
         };
         Ok(res)
     }
 
-    fn delete(&self, key: &str) -> Result<(), RepoError> {
+    fn delete(&self, key: &str) -> Result<(), Error> {
         let mut conn = self.get()?;
         diesel::delete(resources::dsl::resources.filter(resources::dsl::key.eq(key)))
             .execute(&mut conn)?;

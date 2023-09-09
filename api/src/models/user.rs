@@ -1,5 +1,5 @@
 use super::{password::Password, role::Role, user_name::UserName};
-use crate::{repositories::repo::RepoError, schema::users};
+use crate::{error::Error, schema::users};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -19,7 +19,7 @@ pub struct User {
 }
 
 impl User {
-    pub fn new(name: String, password: String, role: Role) -> Result<Self, RepoError> {
+    pub fn new(name: String, password: String, role: Role) -> Result<Self, Error> {
         let name = UserName::new(name)?;
         let normalized_name = name.to_lowercase();
         let password = Password::new(password)?;

@@ -6,8 +6,9 @@ use crate::{
         token::create_token,
     },
     controllers::controller::Controller,
+    error::{ApiError, Error},
     models::{credentials::Credentials, role::Role, user::User},
-    repositories::{query_config::QueryConfig, repo::{RepoError, ApiError}, user::repo::UserRepo},
+    repositories::{query_config::QueryConfig, user::repo::UserRepo},
 };
 use rocket::{delete, get, post, routes, serde::json::Json, Build, State};
 use serde::{Deserialize, Serialize};
@@ -57,16 +58,16 @@ async fn login<'a>(
     let user = pool
         .get_by_name(credentials.name.to_ascii_lowercase())
         .map_err(|e| match e {
-            RepoError::UserNotFound(_) => RepoError::InvalidCredentials,
+            Error::UserNotFound(_) => Error::InvalidCredentials,
             _ => e,
         })?;
     if !user.password.verify(credentials.password.clone()) {
-        return Err(RepoError::InvalidCredentials.into());
+        return Err(Error::InvalidCredentials.into());
     }
     if !user.confirmed {
-        return Err(RepoError::UserNotConfirmed(credentials.name.to_string()).into());
+        return Err(Error::UserNotConfirmed(credentials.name.to_string()).into());
     }
-    let token = create_token(secrets, &user).map_err(<AuthError as Into<RepoError>>::into)?;
+    let token = create_token(secrets, &user).map_err(<AuthError as Into<Error>>::into)?;
     Ok(Json(ApiResponse::ok(LoginResponse { token, user })))
 }
 

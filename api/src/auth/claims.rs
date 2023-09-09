@@ -33,25 +33,26 @@ impl TryFrom<BTreeMap<String, String>> for Claims {
     fn try_from(value: BTreeMap<String, String>) -> Result<Self, Self::Error> {
         let sub = get_claim_value(&value, SUB_CLAIM)?;
         let exp = get_claim_value(&value, EXP_CLAIM)?;
-        if exp < chrono::Utc::now().timestamp() as u64 {
-            return Err(AuthError::TokenExpired(chrono::Duration::seconds(
-                exp as i64 - chrono::Utc::now().timestamp(),
-            )));
+        match (exp as i64) - chrono::Utc::now().timestamp() {
+            ref x if x < &0 => Err(AuthError::TokenExpiredS(-*x)),
+            _ => Ok(Self {
+                sub,
+                exp,
+                acs: get_claim_value(&value, ACS_CLAIM)?,
+            }),
         }
-        let acs = get_claim_value(&value, ACS_CLAIM)?;
-        Ok(Self { sub, exp, acs })
     }
 }
 
-fn get_claim_value<T: FromStr>(
+fn get_claim_value<'a, T: FromStr>(
     claims: &BTreeMap<String, String>,
-    claim: &'static str,
+    claim: &'a str,
 ) -> Result<T, AuthError> {
     claims
         .get(claim)
-        .ok_or(AuthError::MissingClaim(claim))?
+        .ok_or(AuthError::MissingClaim(claim.to_string()))?
         .parse::<T>()
-        .map_err(|_| AuthError::InvalidFormat(claim))
+        .map_err(|_| AuthError::InvalidFormat(claim.to_string()))
 }
 
 impl TryFrom<User> for Claims {
@@ -64,7 +65,7 @@ impl TryFrom<User> for Claims {
                 exp: chrono::Utc::now().timestamp() as u64 + 60 * 60,
                 acs: value.role,
             }),
-            None => Err(AuthError::InvalidFormat("User id")),
+            None => Err(AuthError::InvalidFormat("User id".to_string())),
         }
     }
 }
