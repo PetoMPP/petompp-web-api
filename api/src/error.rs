@@ -23,6 +23,7 @@ pub enum Error {
     InvalidCredentials,
     UserNotConfirmed(String),
     ValidationError(ValidationError),
+    Status(u16, String),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -65,6 +66,7 @@ impl Error {
             Error::InvalidCredentials => http::Status::Unauthorized,
             Error::UserNotConfirmed(_) => http::Status::PaymentRequired,
             Error::ValidationError(_) => http::Status::BadRequest,
+            Error::Status(status, _) => http::Status::from_code(*status).unwrap(),
         }
     }
 }

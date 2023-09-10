@@ -5,7 +5,8 @@ use diesel::{
     r2d2::{ConnectionManager, Pool},
     PgConnection,
 };
-use repositories::{user::repo::UserRepo, resources::repo::ResourcesRepo};
+use error::Error;
+use repositories::{resources::repo::ResourcesRepo, user::repo::UserRepo};
 use rocket::{catch, http::Status, serde::json::Json, Build, Config, Rocket};
 use rocket::{catchers, Request};
 use std::env;
@@ -37,7 +38,11 @@ impl Default for Secrets {
     }
 }
 
-pub fn build_rocket(secrets: &Secrets, user_repo: &'static dyn UserRepo, resources_repo: &'static dyn ResourcesRepo) -> Rocket<Build> {
+pub fn build_rocket(
+    secrets: &Secrets,
+    user_repo: &'static dyn UserRepo,
+    resources_repo: &'static dyn ResourcesRepo,
+) -> Rocket<Build> {
     let cors = rocket_cors::CorsOptions::default()
         .allow_credentials(true)
         .to_cors()
@@ -69,9 +74,9 @@ pub fn get_connection_pool(secrets: &Secrets) -> PgPool {
 }
 
 #[catch(default)]
-fn err(status: Status, _req: &Request) -> Json<ApiResponse<'static, String>> {
-    Json(ApiResponse {
-        status: "error",
-        data: status.to_string(),
-    })
+fn err(status: Status, _req: &Request) -> Json<ApiResponse<'static, Error>> {
+    Json(ApiResponse::err(Error::Status(
+        status.code,
+        status.to_string(),
+    )))
 }
