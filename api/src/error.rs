@@ -95,4 +95,10 @@ impl From<AuthError> for Error {
     }
 }
 
+impl From<rocket::http::Status> for Error {
+    fn from(value: rocket::http::Status) -> Self {
+        Error::Status(value.code, value.to_string())
+    }
+}
+
 impl std::error::Error for Error {}

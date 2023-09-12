@@ -23,3 +23,5 @@ sha2 = "0.10"
 strum = "0.25"
 strum_macros = "0.25"
 urandom = "0.1"
+uuid = { version = "1.4", features = ["serde", "v4"] }
+

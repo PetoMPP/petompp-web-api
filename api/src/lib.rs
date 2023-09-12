@@ -1,5 +1,6 @@
 use crate::controllers::users::UsersController;
 use crate::controllers::{controller::ControllerRegisterer, response::ApiResponse};
+use controllers::image::ImageController;
 use controllers::resources::ResourcesController;
 use diesel::{
     r2d2::{ConnectionManager, Pool},
@@ -7,7 +8,7 @@ use diesel::{
 };
 use error::Error;
 use repositories::{resources::repo::ResourcesRepo, user::repo::UserRepo};
-use rocket::{catch, http::Status, serde::json::Json, Build, Config, Rocket};
+use rocket::{catch, http::Status, serde::json::Json, Build, Rocket};
 use rocket::{catchers, Request};
 use std::env;
 
@@ -51,6 +52,7 @@ pub fn build_rocket(
     rocket::build()
         .add(UsersController)
         .add(ResourcesController)
+        .add(ImageController)
         .mount("/", rocket_cors::catch_all_options_routes())
         .register("/", catchers![err])
         .attach(cors.clone())
@@ -58,11 +60,6 @@ pub fn build_rocket(
         .manage(secrets.clone())
         .manage(user_repo)
         .manage(resources_repo)
-        .configure(Config {
-            port: 16969,
-            address: "0.0.0.0".parse().unwrap(),
-            ..Default::default()
-        })
 }
 
 pub fn get_connection_pool(secrets: &Secrets) -> PgPool {
@@ -74,9 +71,6 @@ pub fn get_connection_pool(secrets: &Secrets) -> PgPool {
 }
 
 #[catch(default)]
-fn err(status: Status, _req: &Request) -> Json<ApiResponse<'static, Error>> {
-    Json(ApiResponse::err(Error::Status(
-        status.code,
-        status.to_string(),
-    )))
+async fn err(status: Status, _req: &Request<'_>) -> Json<ApiResponse<'static, Error>> {
+    Json(ApiResponse::err(Error::from(status)))
 }
