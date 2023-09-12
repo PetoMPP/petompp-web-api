@@ -10,7 +10,7 @@ use crate::{
     models::{credentials::Credentials, role::Role, user::User},
     repositories::{query_config::QueryConfig, user::repo::UserRepo},
 };
-use rocket::{delete, get, post, routes, serde::json::Json, Build, State};
+use rocket::{delete, get, post, routes, serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 
 pub struct UsersController;
@@ -22,10 +22,6 @@ impl Controller for UsersController {
 
     fn routes(&self) -> Vec<rocket::Route> {
         routes![create, login, get_self, activate, get_all, delete]
-    }
-
-    fn add_managed(&self, rocket: rocket::Rocket<Build>) -> rocket::Rocket<Build> {
-        rocket
     }
 }
 

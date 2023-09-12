@@ -3,7 +3,6 @@ use rocket::{Build, Rocket};
 pub trait Controller {
     fn path(&self) -> &'static str;
     fn routes(&self) -> Vec<rocket::Route>;
-    fn add_managed(&self, rocket: rocket::Rocket<rocket::Build>) -> rocket::Rocket<rocket::Build>;
 }
 
 pub trait ControllerRegisterer {
@@ -18,8 +17,6 @@ impl ControllerRegisterer for Rocket<Build> {
             true => format!("{}{}", PATH, path),
             false => format!("{}/{}", PATH, path),
         };
-        controller
-            .add_managed(self)
-            .mount(path, controller.routes())
+        self.mount(path, controller.routes())
     }
 }

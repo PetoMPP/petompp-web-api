@@ -1,10 +1,17 @@
+use super::{controller::Controller, response::ApiResponse};
 use crate::{
     auth::claims::Claims,
     error::{ApiError, Error},
+    services::azure_blob::AzureBlobService,
 };
-
-use super::{controller::Controller, response::ApiResponse};
-use rocket::{fs::TempFile, get, http::Status, put, routes, serde::json::Json, Build};
+use rocket::{
+    data::{Limits, ToByteUnit},
+    get,
+    http::{ContentType, Status},
+    put, routes,
+    serde::json::Json,
+    Data, State,
+};
 
 pub struct ImageController;
 
@@ -16,21 +23,16 @@ impl Controller for ImageController {
     fn routes(&self) -> Vec<rocket::Route> {
         routes![upload]
     }
-
-    fn add_managed(&self, rocket: rocket::Rocket<Build>) -> rocket::Rocket<Build> {
-        rocket
-    }
 }
 
 #[put("/", data = "<img>")]
 async fn upload<'a>(
     _claims: Claims,
-    mut img: TempFile<'a>,
+    content_type: &ContentType,
+    limits: &Limits,
+    blob_service: &State<AzureBlobService>,
+    img: Data<'a>,
 ) -> Result<Json<ApiResponse<'a, String>>, ApiError<'a>> {
-    let Some(content_type) = img.content_type() else {
-        println!("No media type");
-        return Err(Error::from(Status::BadRequest).into());
-    };
     if !content_type.is_jpeg() && !content_type.is_png() && !content_type.is_bmp() {
         println!("Invalid media type");
         return Err(Error::from(Status::BadRequest).into());
@@ -40,12 +42,17 @@ async fn upload<'a>(
         return Err(Error::from(Status::BadRequest).into());
     };
     let filename = format!("{}.{}", uuid::Uuid::new_v4(), ext);
-    img.persist_to(format!("./temp/{}", &filename))
+    let data = img
+        .open(limits.get("file").unwrap_or(5.mebibytes()))
+        .into_bytes()
         .await
-        .map_err(|e| {
-            println!("{:?}", e);
-            Error::from(Status::InternalServerError)
-        })?;
+        .map_err(|_| Error::from(Status::InternalServerError))?;
+    if !data.is_complete() {
+        return Err(Error::from(Status::PayloadTooLarge).into());
+    }
+    blob_service
+        .upload(filename.clone(), data.to_vec(), content_type.to_string())
+        .await;
     Ok(Json(ApiResponse::ok(filename)))
 }
 

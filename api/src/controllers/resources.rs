@@ -7,7 +7,7 @@ use crate::{
 };
 
 use super::controller::Controller;
-use rocket::{delete, get, post, put, routes, serde::json::Json, Build};
+use rocket::{delete, get, post, put, routes, serde::json::Json};
 
 pub struct ResourcesController;
 
@@ -18,10 +18,6 @@ impl Controller for ResourcesController {
 
     fn routes(&self) -> Vec<rocket::Route> {
         routes![get, get_all_keys, create, update, delete]
-    }
-
-    fn add_managed(&self, rocket: rocket::Rocket<Build>) -> rocket::Rocket<Build> {
-        rocket
     }
 }
 

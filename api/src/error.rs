@@ -101,4 +101,10 @@ impl From<rocket::http::Status> for Error {
     }
 }
 
+impl From<azure_core::error::Error> for Error {
+    fn from(value: azure_core::error::Error) -> Self {
+        Error::Status(500, value.to_string())
+    }
+}
+
 impl std::error::Error for Error {}
