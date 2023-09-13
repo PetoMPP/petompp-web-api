@@ -52,7 +52,7 @@ async fn upload<'a>(
     }
     blob_service
         .upload(filename.clone(), data.to_vec(), content_type.to_string())
-        .await;
+        .await?;
     Ok(Json(ApiResponse::ok(filename)))
 }
 
