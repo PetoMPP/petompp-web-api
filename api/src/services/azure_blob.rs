@@ -36,13 +36,17 @@ impl AzureBlobService {
     pub async fn upload(
         &self,
         name: String,
+        folder: String,
         data: Vec<u8>,
         content_type: String,
     ) -> Result<(), Error> {
         Ok(self
             .client
             .clone()
-            .blob_client(self.secrets.container_name.clone(), name)
+            .blob_client(
+                self.secrets.container_name.clone(),
+                format!("{}/{}", folder, name),
+            )
             .put_block_blob(data)
             .content_type(content_type)
             .await

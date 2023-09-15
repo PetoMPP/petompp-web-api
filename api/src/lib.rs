@@ -11,6 +11,7 @@ use repositories::{resources::repo::ResourcesRepo, user::repo::UserRepo};
 use rocket::{catch, http::Status, serde::json::Json, Build, Rocket};
 use rocket::{catchers, Request};
 use services::azure_blob::{AzureBlobService, AzureBlobSecrets};
+use services::filename::FilenameService;
 use std::env;
 
 pub mod auth;
@@ -63,6 +64,7 @@ pub fn build_rocket(
         .manage(user_repo)
         .manage(resources_repo)
         .manage(AzureBlobService::new(AzureBlobSecrets::default()))
+        .manage(FilenameService::new())
 }
 
 pub fn get_connection_pool(secrets: &Secrets) -> PgPool {
