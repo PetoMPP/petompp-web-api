@@ -6,7 +6,6 @@ use crate::{
 };
 use rocket::{
     data::{Limits, ToByteUnit},
-    get,
     http::{ContentType, Status},
     put, routes,
     serde::json::Json,
@@ -70,6 +69,3 @@ async fn upload<'a>(
         .await?;
     Ok(Json(ApiResponse::ok(filename)))
 }
-
-#[get("/<key>")]
-async fn get(key: String) {}
