@@ -87,6 +87,7 @@ impl PasswordRequirements {
         if password.len() < self.min_length as usize {
             return Err(Error::ValidationError(ValidationError::Password(*self)));
         }
+        #[allow(clippy::type_complexity)]
         let checks: Vec<Box<dyn Fn(&str) -> bool>> = vec![
             Box::new(|s: &str| self.numbers && s.chars().any(|c| c.is_numeric())),
             Box::new(|s: &str| self.uppercase && s.chars().any(|c| c.is_uppercase())),

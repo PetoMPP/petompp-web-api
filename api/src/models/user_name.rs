@@ -16,7 +16,7 @@ pub struct UserName(String);
 impl UserName {
     pub fn new(name: String) -> Result<Self, Error> {
         let name = name.trim();
-        validate_name(&name)?;
+        validate_name(name)?;
         Ok(Self(name.to_string()))
     }
 }

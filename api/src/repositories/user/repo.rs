@@ -43,7 +43,8 @@ impl UserRepo for PgPool {
         let Some(user) = users::dsl::users
             .filter(users::normalized_name.eq(&normalized_name))
             .first::<User>(&mut conn)
-            .optional()? else {
+            .optional()?
+        else {
             return Err(Error::UserNotFound(normalized_name.to_string()));
         };
         Ok(user)
@@ -54,7 +55,8 @@ impl UserRepo for PgPool {
         let Some(user) = users::dsl::users
             .filter(users::id.eq(id))
             .first::<User>(&mut conn)
-            .optional()? else {
+            .optional()?
+        else {
             return Err(Error::UserNotFound(format!("ID: {}", id)));
         };
         Ok(user)
@@ -72,7 +74,8 @@ impl UserRepo for PgPool {
         let Some(user) = diesel::update(users::dsl::users.filter(users::id.eq(id)))
             .set(users::confirmed.eq(true))
             .get_result::<User>(&mut conn)
-            .optional()? else {
+            .optional()?
+        else {
             return Err(Error::UserNotFound(format!("ID: {}", id)));
         };
         Ok(user)
@@ -83,7 +86,8 @@ impl UserRepo for PgPool {
         let Some(user) = diesel::update(users::dsl::users.filter(users::id.eq(id)))
             .set(users::deleted_at.eq(chrono::Utc::now().naive_utc()))
             .get_result::<User>(&mut conn)
-            .optional()? else {
+            .optional()?
+        else {
             return Err(Error::UserNotFound(format!("ID: {}", id)));
         };
         Ok(user)

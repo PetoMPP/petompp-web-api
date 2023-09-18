@@ -38,7 +38,7 @@ impl ResourcesRepo for PgPool {
                     .get_result::<(Option<String>, String)>(&mut conn)?;
                 pl.unwrap_or(en)
             }
-            "en" | _ => q.select(resources::en).get_result::<String>(&mut conn)?,
+            _ => q.select(resources::en).get_result::<String>(&mut conn)?,
         };
         Ok(res)
     }

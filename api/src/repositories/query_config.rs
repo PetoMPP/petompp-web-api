@@ -168,7 +168,7 @@ impl<'r> FromFormField<'r> for PageRange {
 #[macro_export]
 macro_rules! impl_query_config {
     ($dsl_table:expr, $table:ty, $boxed:ty, $type:ident, [$(($column:expr, $name:expr),)*]) => {
-        use crate::{
+        use $crate::{
             repositories::{
                 query_config::{PageRange, QueryConfig, SortOrder},
             },

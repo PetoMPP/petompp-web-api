@@ -6,8 +6,8 @@ pub struct FilenameService {
     outer_dots: Regex,
 }
 
-impl FilenameService {
-    pub fn new() -> Self {
+impl Default for FilenameService {
+    fn default() -> Self {
         Self {
             reserved: Regex::new("[<>:\"/\\\\|?*\u{0000}-\u{001F}\u{007F}\u{0080}-\u{009F}]+")
                 .unwrap(),
@@ -15,7 +15,9 @@ impl FilenameService {
             outer_dots: Regex::new("^\\.+|\\.+$").unwrap(),
         }
     }
+}
 
+impl FilenameService {
     pub fn is_valid(&self, filename: &str) -> bool {
         !self.reserved.is_match(filename)
             && !self.win_reserved.is_match(filename)

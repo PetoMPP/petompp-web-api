@@ -44,9 +44,9 @@ impl TryFrom<BTreeMap<String, String>> for Claims {
     }
 }
 
-fn get_claim_value<'a, T: FromStr>(
+fn get_claim_value<T: FromStr>(
     claims: &BTreeMap<String, String>,
-    claim: &'a str,
+    claim: &str,
 ) -> Result<T, AuthError> {
     claims
         .get(claim)

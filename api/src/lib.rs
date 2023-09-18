@@ -10,7 +10,7 @@ use error::Error;
 use repositories::{resources::repo::ResourcesRepo, user::repo::UserRepo};
 use rocket::{catch, http::Status, serde::json::Json, Build, Rocket};
 use rocket::{catchers, Request};
-use services::azure_blob::{AzureBlobService, AzureBlobSecrets};
+use services::azure_blob::{AzureBlobSecrets, AzureBlobService};
 use services::filename::FilenameService;
 use std::env;
 
@@ -19,8 +19,8 @@ pub mod controllers;
 pub mod error;
 pub mod models;
 pub mod repositories;
-pub mod services;
 pub mod schema;
+pub mod services;
 
 pub type PgPool = Pool<ConnectionManager<PgConnection>>;
 
@@ -64,7 +64,7 @@ pub fn build_rocket(
         .manage(user_repo)
         .manage(resources_repo)
         .manage(AzureBlobService::new(AzureBlobSecrets::default()))
-        .manage(FilenameService::new())
+        .manage(FilenameService::default())
 }
 
 pub fn get_connection_pool(secrets: &Secrets) -> PgPool {
