@@ -14,27 +14,10 @@ jobs:
           with:
             fetch-depth: 0
 
-        - name: Setup Node.js 
-          uses: actions/setup-node@v3
-          with:
-            node-version: 18
-            cache: 'npm'
-            cache-dependency-path: ./front/package-lock.json
-
-        - name: Install dependencies
-          run: npm install
-          working-directory: ${{ github.workspace }}/front
-
-        - name: Install stable Cargo toolchain
-          uses: actions-rs/toolchain@v1.0.6
-          with: 
-            toolchain: stable
-
-        # front
         - name: Initialize rust cache
           uses: Swatinem/rust-cache@v2
           with:
-            workspaces: ${{ github.workspace }}/front
+            workspaces: ${{ github.workspace }}
 
         - name: Install wasm target
           run: rustup target add wasm32-unknown-unknown
@@ -42,23 +25,10 @@ jobs:
         - name: Install trunk
           run: cargo install trunk
 
-        - name: Build front
+        - name: Build
           run: cargo build
-          working-directory: ${{ github.workspace }}/front
+          working-directory: ${{ github.workspace }}
 
-        - name: Run rust tests front
+        - name: Run rust tests
           run: cargo test
-          working-directory: ${{ github.workspace }}/front
-
-        - name: Build trunk
-          run: trunk build
-          working-directory: ${{ github.workspace }}/front
-        
-        # api
-        - name: Build api
-          run: cargo build
-          working-directory: ${{ github.workspace }}/api
-
-        - name: Run rust tests api
-          run: cargo test
-          working-directory: ${{ github.workspace }}/api
+          working-directory: ${{ github.workspace }}
