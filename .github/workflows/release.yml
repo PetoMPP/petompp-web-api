@@ -4,6 +4,15 @@ on:
   push: 
     branches:
       - 'release/**'
+    paths:
+      - 'src/**'
+      - '.github/workflows/**'
+      - 'migrations/**'
+      - 'Dockerfile'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'Diesel.toml'
+      - 'Rocket.toml'
 
 env:
   image_name: ${{ secrets.REGISTRY_NAME }}/peto-main-api
