@@ -6,7 +6,6 @@ on:
       - 'release/**'
     paths:
       - 'src/**'
-      - '.github/workflows/**'
       - 'migrations/**'
       - 'Dockerfile'
       - 'Cargo.toml'
