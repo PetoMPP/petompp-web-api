@@ -7,9 +7,10 @@ use crate::{
     },
     controllers::controller::Controller,
     error::{ApiError, Error},
-    models::{credentials::Credentials, role::Role, user::User},
+    models::{role::Role, user::User},
     repositories::{query_config::QueryConfig, user::repo::UserRepo},
 };
+use petompp_web_models::models::credentials::Credentials;
 use rocket::{delete, get, post, routes, serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 

@@ -18,8 +18,8 @@ jwt = "0.16"
 lazy_static = "1.4"
 num-traits = "0.2"
 num-derive = "0.4"
+petompp-web-models = { git = "https://github.com/PetoMPP/petompp-web-models.git", branch = "0.1.1" }
 r2d2 = "0.8"
-regex = "1.9"
 rocket = { version = "0.5.0-rc.3", features = ["json"] }
 rocket_cors = "0.6.0-alpha2"
 serde = { version = "1.0", features = ["derive"] }
