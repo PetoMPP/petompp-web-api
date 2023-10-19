@@ -7,11 +7,11 @@ use diesel::{
     PgConnection,
 };
 use error::Error;
+use petompp_web_models::services::filename::FilenameService;
 use repositories::{resources::repo::ResourcesRepo, user::repo::UserRepo};
 use rocket::{catch, http::Status, serde::json::Json, Build, Rocket};
 use rocket::{catchers, Request};
 use services::azure_blob::{AzureBlobSecrets, AzureBlobService};
-use services::filename::FilenameService;
 use std::env;
 
 pub mod auth;

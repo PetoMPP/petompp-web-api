@@ -1352,8 +1352,8 @@ dependencies = [
  "lazy_static",
  "num-derive",
  "num-traits",
+ "petompp-web-models",
  "r2d2",
- "regex",
  "rocket",
  "rocket_cors",
  "serde",
@@ -1362,6 +1362,18 @@ dependencies = [
  "strum_macros",
  "urandom",
  "uuid",
+]
+
+[[package]]
+name = "petompp-web-models"
+version = "0.1.0"
+source = "git+https://github.com/PetoMPP/petompp-web-models.git?branch=0.1.1#a51e7aeef35f39b106b442899e9a4aea55c6dbd8"
+dependencies = [
+ "chrono",
+ "deref-derive",
+ "regex",
+ "serde",
+ "strum",
 ]
 
 [[package]]
@@ -2010,6 +2022,9 @@ name = "strum"
 version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "290d54ea6f91c969195bdbcd7442c8c2a2ba87da8bf60a7ee86a235d4bc1e125"
+dependencies = [
+ "strum_macros",
+]
 
 [[package]]
 name = "strum_macros"

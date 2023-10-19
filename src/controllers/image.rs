@@ -2,8 +2,9 @@ use super::{controller::Controller, response::ApiResponse};
 use crate::{
     auth::claims::Claims,
     error::{ApiError, Error},
-    services::{azure_blob::AzureBlobService, filename::FilenameService},
+    services::azure_blob::AzureBlobService,
 };
+use petompp_web_models::services::filename::FilenameService;
 use rocket::{
     data::{Limits, ToByteUnit},
     http::{ContentType, Status},
