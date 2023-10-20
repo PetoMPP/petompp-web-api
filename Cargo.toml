@@ -6,10 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-azure_core = "0.15"
-azure_storage = "0.15"
-azure_storage_blobs = "0.15"
-chrono = { version = "0.4", features = ["serde"] }
+azure_core = "0.16"
+azure_storage = "0.16"
+azure_storage_blobs = "0.16"
+chrono = { version = "0.4.31", features = ["serde"] }
 deref-derive = "0.1"
 diesel = { version = "2.0.0", features = ["postgres", "r2d2", "chrono"] }
 diesel_migrations = "2.1"
@@ -18,7 +18,9 @@ jwt = "0.16"
 lazy_static = "1.4"
 num-traits = "0.2"
 num-derive = "0.4"
-petompp-web-models = { git = "https://github.com/PetoMPP/petompp-web-models.git", branch = "0.1.1" }
+petompp-web-models = { git = "https://github.com/PetoMPP/petompp-web-models.git", branch = "0.2.0", features = [
+    "api-errors",
+] }
 r2d2 = "0.8"
 rocket = { version = "0.5.0-rc.3", features = ["json"] }
 rocket_cors = "0.6.0-alpha2"

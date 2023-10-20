@@ -1,9 +1,7 @@
 use super::query::UsersQuery;
-use crate::{
-    error::Error, models::user::User, repositories::query_config::QueryConfig, schema::users,
-    PgPool,
-};
+use crate::{models::user::User, repositories::query_config::QueryConfig, schema::users, PgPool};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
+use petompp_web_models::error::Error;
 use rocket::{async_trait, http::Status, outcome::Outcome, request::FromRequest, Request};
 
 pub trait UserRepo: Send + Sync {

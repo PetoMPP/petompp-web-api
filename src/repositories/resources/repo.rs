@@ -1,17 +1,13 @@
-use crate::{
-    error::{Error, ResourceDataValidationError, ValidationError},
-    models::resource_data::ResourceData,
-    schema::resources,
-    PgPool,
-};
+use crate::{models::resource_data::Resource, schema::resources, PgPool};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use petompp_web_models::error::{Error, ResourceDataValidationError, ValidationError};
 use rocket::{async_trait, http::Status, outcome::Outcome, request::FromRequest, Request};
 
 pub trait ResourcesRepo: Send + Sync {
     fn get(&self, key: &str, lang: &str) -> Result<String, Error>;
-    fn get_all(&self) -> Result<Vec<ResourceData>, Error>;
-    fn create(&self, data: &ResourceData) -> Result<ResourceData, Error>;
-    fn update(&self, data: &ResourceData) -> Result<ResourceData, Error>;
+    fn get_all(&self) -> Result<Vec<Resource>, Error>;
+    fn create(&self, data: &Resource) -> Result<Resource, Error>;
+    fn update(&self, data: &Resource) -> Result<Resource, Error>;
     fn delete(&self, key: &str) -> Result<(), Error>;
 }
 
@@ -43,21 +39,21 @@ impl ResourcesRepo for PgPool {
         Ok(res)
     }
 
-    fn get_all(&self) -> Result<Vec<ResourceData>, Error> {
+    fn get_all(&self) -> Result<Vec<Resource>, Error> {
         let mut conn = self.get()?;
-        let res = resources::dsl::resources.load::<ResourceData>(&mut conn)?;
+        let res = resources::dsl::resources.load::<Resource>(&mut conn)?;
         Ok(res)
     }
 
-    fn create(&self, data: &ResourceData) -> Result<ResourceData, Error> {
+    fn create(&self, data: &Resource) -> Result<Resource, Error> {
         let mut conn = self.get()?;
         let res = diesel::insert_into(resources::dsl::resources)
             .values(data)
-            .get_result::<ResourceData>(&mut conn)?;
+            .get_result::<Resource>(&mut conn)?;
         Ok(res)
     }
 
-    fn update(&self, data: &ResourceData) -> Result<ResourceData, Error> {
+    fn update(&self, data: &Resource) -> Result<Resource, Error> {
         let mut conn = self.get()?;
         let key = data
             .key
@@ -69,15 +65,15 @@ impl ResourcesRepo for PgPool {
             (Some(en), Some(pl)) => diesel::update(resources::dsl::resources)
                 .filter(resources::dsl::key.eq(key))
                 .set((resources::dsl::en.eq(en), resources::dsl::pl.eq(pl)))
-                .get_result::<ResourceData>(&mut conn)?,
+                .get_result::<Resource>(&mut conn)?,
             (Some(en), None) => diesel::update(resources::dsl::resources)
                 .filter(resources::dsl::key.eq(key))
                 .set(resources::dsl::en.eq(en))
-                .get_result::<ResourceData>(&mut conn)?,
+                .get_result::<Resource>(&mut conn)?,
             (None, Some(pl)) => diesel::update(resources::dsl::resources)
                 .filter(resources::dsl::key.eq(key))
                 .set(resources::dsl::pl.eq(pl))
-                .get_result::<ResourceData>(&mut conn)?,
+                .get_result::<Resource>(&mut conn)?,
             _ => {
                 return Err(Error::ValidationError(ValidationError::ResourceData(
                     ResourceDataValidationError::ValueMissing,

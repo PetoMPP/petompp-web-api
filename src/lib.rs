@@ -1,13 +1,13 @@
+use crate::controllers::controller::ControllerRegisterer;
 use crate::controllers::users::UsersController;
-use crate::controllers::{controller::ControllerRegisterer, response::ApiResponse};
 use controllers::image::ImageController;
 use controllers::resources::ResourcesController;
 use diesel::{
     r2d2::{ConnectionManager, Pool},
     PgConnection,
 };
-use error::Error;
 use petompp_web_models::services::filename::FilenameService;
+use petompp_web_models::{error::Error, models::api_response::ApiResponse};
 use repositories::{resources::repo::ResourcesRepo, user::repo::UserRepo};
 use rocket::{catch, http::Status, serde::json::Json, Build, Rocket};
 use rocket::{catchers, Request};
@@ -16,7 +16,6 @@ use std::env;
 
 pub mod auth;
 pub mod controllers;
-pub mod error;
 pub mod models;
 pub mod repositories;
 pub mod schema;
