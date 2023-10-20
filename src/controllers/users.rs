@@ -1,16 +1,17 @@
-use super::response::ApiResponse;
 use crate::{
     auth::{
         claims::{AdminClaims, Claims},
-        error::AuthError,
         token::create_token,
     },
     controllers::controller::Controller,
-    error::{ApiError, Error},
     models::{role::Role, user::User},
     repositories::{query_config::QueryConfig, user::repo::UserRepo},
 };
-use petompp_web_models::models::credentials::Credentials;
+use petompp_web_models::models::api_response::ApiResponse;
+use petompp_web_models::{
+    error::{ApiError, AuthError, Error},
+    models::{credentials::Credentials, user::UserData},
+};
 use rocket::{delete, get, post, routes, serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 
@@ -27,23 +28,23 @@ impl Controller for UsersController {
 }
 
 #[post("/", data = "<credentials>")]
-async fn create(
+fn create(
     credentials: Json<Credentials>,
     pool: &dyn UserRepo,
-) -> Result<Json<ApiResponse<User>>, ApiError> {
+) -> Result<Json<ApiResponse<UserData>>, ApiError> {
     let user = User::new(
         credentials.name.clone(),
         credentials.password.clone(),
         Role::User,
     )?;
     let user = pool.create(&user)?;
-    Ok(Json(ApiResponse::ok(user)))
+    Ok(Json(ApiResponse::ok(user.into())))
 }
 
 #[derive(Serialize, Deserialize)]
 struct LoginResponse {
     token: String,
-    user: User,
+    user: UserData,
 }
 
 #[post("/login", data = "<credentials>")]
@@ -65,16 +66,19 @@ async fn login<'a>(
         return Err(Error::UserNotConfirmed(credentials.name.to_string()).into());
     }
     let token = create_token(secrets, &user).map_err(<AuthError as Into<Error>>::into)?;
-    Ok(Json(ApiResponse::ok(LoginResponse { token, user })))
+    Ok(Json(ApiResponse::ok(LoginResponse {
+        token,
+        user: user.into(),
+    })))
 }
 
 #[get("/")]
 async fn get_self(
     claims: Claims,
     pool: &dyn UserRepo,
-) -> Result<Json<ApiResponse<User>>, ApiError> {
+) -> Result<Json<ApiResponse<UserData>>, ApiError> {
     let user = pool.get_by_id(claims.sub)?;
-    Ok(Json(ApiResponse::ok(user)))
+    Ok(Json(ApiResponse::ok(user.into())))
 }
 
 #[get("/all?<query..>")]
@@ -82,8 +86,12 @@ fn get_all(
     _claims: AdminClaims,
     query: QueryConfig,
     pool: &dyn UserRepo,
-) -> Result<Json<ApiResponse<Vec<Vec<User>>>>, ApiError> {
-    let users = pool.get_all(&query)?;
+) -> Result<Json<ApiResponse<Vec<Vec<UserData>>>>, ApiError> {
+    let users = pool
+        .get_all(&query)?
+        .into_iter()
+        .map(|us| us.into_iter().map(|u| u.into()).collect::<Vec<_>>())
+        .collect::<Vec<Vec<_>>>();
     Ok(Json(ApiResponse::ok(users)))
 }
 
@@ -92,9 +100,9 @@ async fn activate(
     _claims: AdminClaims,
     id: i32,
     pool: &dyn UserRepo,
-) -> Result<Json<ApiResponse<User>>, ApiError> {
+) -> Result<Json<ApiResponse<UserData>>, ApiError> {
     let user = pool.activate(id)?;
-    Ok(Json(ApiResponse::ok(user)))
+    Ok(Json(ApiResponse::ok(user.into())))
 }
 
 #[delete("/<id>")]
@@ -102,7 +110,7 @@ async fn delete(
     _claims: AdminClaims,
     id: i32,
     pool: &dyn UserRepo,
-) -> Result<Json<ApiResponse<User>>, ApiError> {
+) -> Result<Json<ApiResponse<UserData>>, ApiError> {
     let user = pool.delete(id)?;
-    Ok(Json(ApiResponse::ok(user)))
+    Ok(Json(ApiResponse::ok(user.into())))
 }
