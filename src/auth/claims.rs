@@ -1,8 +1,9 @@
-use super::{error::AuthError, token::validate_token};
+use super::token::validate_token;
 use crate::{
     models::{role::Role, user::User},
     Secrets,
 };
+use petompp_web_models::error::AuthError;
 use rocket::{http::Status, outcome::Outcome, request::FromRequest, Request};
 use std::{collections::BTreeMap, str::FromStr};
 

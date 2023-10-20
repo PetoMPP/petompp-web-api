@@ -1,7 +1,8 @@
-use super::{claims::Claims, error::AuthError};
+use super::claims::Claims;
 use crate::{models::user::User, Secrets};
 use hmac::{digest::KeyInit, Hmac};
 use jwt::{SignWithKey, VerifyWithKey};
+use petompp_web_models::error::AuthError;
 use sha2::Sha256;
 use std::collections::BTreeMap;
 

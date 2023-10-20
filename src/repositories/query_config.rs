@@ -172,8 +172,8 @@ macro_rules! impl_query_config {
             repositories::{
                 query_config::{PageRange, QueryConfig, SortOrder},
             },
-            error::{Error, ValidationError, QueryValidationError},
         };
+        use petompp_web_models::error::{Error, ValidationError, QueryValidationError};
         use diesel::{pg::Pg, query_builder::QueryFragment, AppearsOnTable, ExpressionMethods, QueryDsl};
 
         pub trait $type {

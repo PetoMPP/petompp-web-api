@@ -1,6 +1,6 @@
-use crate::error::Error;
 use azure_storage::prelude::*;
 use azure_storage_blobs::prelude::*;
+use petompp_web_models::error::Error;
 
 #[derive(Debug)]
 pub struct AzureBlobSecrets {
@@ -28,24 +28,25 @@ pub struct AzureBlobService {
 
 impl AzureBlobService {
     pub fn new(secrets: AzureBlobSecrets) -> Self {
-        let creds = StorageCredentials::Key(secrets.account.clone(), secrets.account_key.clone());
+        let creds =
+            StorageCredentials::access_key(secrets.account.clone(), secrets.account_key.clone());
         let client = ClientBuilder::new(&secrets.account, creds);
         Self { secrets, client }
     }
 
-    pub async fn upload(
+    pub async fn upload_img(
         &self,
         name: String,
-        folder: String,
         data: Vec<u8>,
         content_type: String,
     ) -> Result<(), Error> {
+        const IMAGE_FOLDER: &str = "image-upload";
         Ok(self
             .client
             .clone()
             .blob_client(
                 self.secrets.container_name.clone(),
-                format!("{}/{}", folder, name),
+                format!("{}/{}", IMAGE_FOLDER, name),
             )
             .put_block_blob(data)
             .content_type(content_type)

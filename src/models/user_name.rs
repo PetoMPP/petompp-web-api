@@ -1,17 +1,14 @@
-use crate::error::{Error, UsernameValidationError, ValidationError};
 use deref_derive::{Deref, DerefMut};
 use diesel::{
     backend::Backend, deserialize::FromSql, pg::Pg, serialize::ToSql, sql_types::Text,
     AsExpression, FromSqlRow,
 };
-use serde::{Deserialize, Serialize};
+use petompp_web_models::error::{Error, UsernameValidationError, ValidationError};
 use std::io::Write;
 
-#[derive(
-    Debug, Clone, Serialize, Deserialize, Default, AsExpression, FromSqlRow, Deref, DerefMut,
-)]
+#[derive(Debug, Clone, Default, AsExpression, FromSqlRow, Deref, DerefMut)]
 #[diesel(sql_type = Text)]
-pub struct UserName(String);
+pub struct UserName(pub String);
 
 impl UserName {
     pub fn new(name: String) -> Result<Self, Error> {
