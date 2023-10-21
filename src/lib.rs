@@ -1,7 +1,7 @@
 use crate::controllers::controller::ControllerRegisterer;
 use crate::controllers::users::UsersController;
-use controllers::image::ImageController;
 use controllers::resources::ResourcesController;
+use controllers::{blog_meta::BlogMetaController, image::ImageController};
 use diesel::{
     r2d2::{ConnectionManager, Pool},
     PgConnection,
@@ -55,6 +55,7 @@ pub fn build_rocket(
         .add(UsersController)
         .add(ResourcesController)
         .add(ImageController)
+        .add(BlogMetaController)
         .mount("/", rocket_cors::catch_all_options_routes())
         .register("/", catchers![err])
         .attach(cors.clone())
