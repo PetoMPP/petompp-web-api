@@ -1,8 +1,8 @@
 use super::controller::Controller;
 use crate::services::azure_blob::AzureBlobService;
 use petompp_web_models::{
-    error::ApiError,
-    models::{api_response::ApiResponse, blog_data::BlogMetaData},
+    error::{ApiError, Error, ValidationError},
+    models::{api_response::ApiResponse, blog_data::BlogMetaData, country::Country},
 };
 use rocket::{get, routes, serde::json::Json, State};
 
@@ -18,13 +18,23 @@ impl Controller for BlogMetaController {
     }
 }
 
-#[get("/<name>")]
+#[get("/<name>/<lang>")]
 async fn get<'a>(
     name: &'a str,
+    lang: &'a str,
     blob_service: &'a State<AzureBlobService>,
 ) -> Result<Json<ApiResponse<'a, BlogMetaData>>, ApiError<'a>> {
     Ok(Json(ApiResponse::ok(
-        blob_service.get_blog_meta(name.to_string()).await?,
+        blob_service
+            .get_blog_meta(
+                &name.to_string(),
+                &Country::try_from(lang).map_err(|_| {
+                    ApiError::from(Error::ValidationError(
+                        ValidationError::Country,
+                    ))
+                })?,
+            )
+            .await?,
     )))
 }
 
