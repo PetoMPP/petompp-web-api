@@ -1,6 +1,9 @@
 use azure_storage::prelude::*;
 use azure_storage_blobs::prelude::*;
-use petompp_web_models::{error::Error, models::blog_data::BlogMetaData};
+use petompp_web_models::{
+    error::Error,
+    models::{blog_data::BlogMetaData, country::Country},
+};
 use rocket::futures::StreamExt;
 
 #[derive(Debug)]
@@ -53,15 +56,12 @@ impl AzureBlobService {
     }
 
     const BLOG_CONTAINER: &str = "blog";
-    pub async fn get_blog_meta(&self, name: String) -> Result<BlogMetaData, Error> {
-        let blob_client = &self
-            .client
-            .clone()
-            .blob_client(Self::BLOG_CONTAINER.to_string(), name);
-        let mut blob = blob_client
-            .get_properties()
-            .await?
-            .blob;
+    pub async fn get_blog_meta(&self, id: &String, lang: &Country) -> Result<BlogMetaData, Error> {
+        let blob_client = &self.client.clone().blob_client(
+            Self::BLOG_CONTAINER.to_string(),
+            format!("{}/{}.md", id, lang.key()),
+        );
+        let mut blob = blob_client.get_properties().await?.blob;
         blob.tags = Some(blob_client.get_tags().await?.tags);
         BlogMetaData::try_from(blob)
     }
