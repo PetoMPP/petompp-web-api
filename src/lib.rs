@@ -6,7 +6,6 @@ use diesel::{
     r2d2::{ConnectionManager, Pool},
     PgConnection,
 };
-use petompp_web_models::services::filename::FilenameService;
 use petompp_web_models::{error::Error, models::api_response::ApiResponse};
 use repositories::{resources::repo::ResourcesRepo, user::repo::UserRepo};
 use rocket::{catch, http::Status, serde::json::Json, Build, Rocket};
@@ -64,7 +63,6 @@ pub fn build_rocket(
         .manage(user_repo)
         .manage(resources_repo)
         .manage(AzureBlobService::new(AzureBlobSecrets::default()))
-        .manage(FilenameService::default())
 }
 
 pub fn get_connection_pool(secrets: &Secrets) -> PgPool {
