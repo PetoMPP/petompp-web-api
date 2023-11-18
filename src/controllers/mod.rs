@@ -1,4 +1,4 @@
-pub mod blog_meta;
+pub mod blog;
 pub mod controller;
 pub mod image;
 pub mod resources;
