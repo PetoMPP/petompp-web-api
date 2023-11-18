@@ -1,10 +1,15 @@
+use azure_core::request_options::Metadata;
 use azure_storage::prelude::*;
 use azure_storage_blobs::prelude::*;
 use petompp_web_models::{
     error::Error,
-    models::{blog_data::BlogMetaData, country::Country},
+    models::{
+        blog_data::{BlogData, BlogMetaData},
+        country::Country,
+    },
 };
-use rocket::futures::StreamExt;
+use rocket::{futures::StreamExt, http::Status};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct AzureBlobSecrets {
@@ -57,13 +62,34 @@ impl AzureBlobService {
 
     const BLOG_CONTAINER: &str = "blog";
     pub async fn get_blog_meta(&self, id: &String, lang: &Country) -> Result<BlogMetaData, Error> {
-        let blob_client = &self.client.clone().blob_client(
-            Self::BLOG_CONTAINER.to_string(),
-            format!("{}/{}.md", id, lang.key()),
-        );
-        let mut blob = blob_client.get_properties().await?.blob;
-        blob.tags = Some(blob_client.get_tags().await?.tags);
-        BlogMetaData::try_from(blob)
+        let mut stream = self
+            .client
+            .clone()
+            .blob_service_client()
+            .container_client(Self::BLOG_CONTAINER.to_string())
+            .list_blobs()
+            .prefix(format!("{}/{}.md", id, lang.key()))
+            .include_metadata(true)
+            .include_tags(true)
+            .include_versions(true)
+            .into_stream();
+        let mut versions = Vec::new();
+        while let Some(resp) = stream.next().await {
+            for blob in resp?.blobs.blobs().cloned() {
+                versions.push(blob);
+            }
+        }
+        let mut curr = versions
+            .iter()
+            .find(|b| b.is_current_version.unwrap_or_default())
+            .cloned()
+            .ok_or_else(|| Error::Status(Status::NotFound.code, Status::NotFound.to_string()))?;
+        curr.properties.creation_time = versions
+            .into_iter()
+            .min_by(|x, y| x.properties.creation_time.cmp(&y.properties.creation_time))
+            .map(|b| b.properties.creation_time)
+            .unwrap();
+        BlogMetaData::try_from(curr)
     }
 
     pub async fn get_all_blog_meta(&self) -> Result<Vec<BlogMetaData>, Error> {
@@ -75,13 +101,65 @@ impl AzureBlobService {
             .list_blobs()
             .include_metadata(true)
             .include_tags(true)
+            .include_versions(true)
             .into_stream();
-        let mut result = Vec::new();
+        let mut result = HashMap::new();
         while let Some(resp) = stream.next().await {
             for blob in resp?.blobs.blobs().cloned() {
-                result.push(BlogMetaData::try_from(blob)?);
+                result
+                    .entry(blob.name.clone())
+                    .or_insert(vec![blob.clone()])
+                    .push(blob);
             }
         }
-        Ok(result)
+        if result.is_empty() {
+            return Err(Error::Status(
+                Status::NotFound.code,
+                Status::NotFound.to_string(),
+            ));
+        }
+        Ok(result
+            .into_values()
+            .filter(|v| v.iter().any(|b| b.is_current_version.unwrap_or_default()))
+            .map(|v| {
+                let mut curr_blob = v
+                    .iter()
+                    .find(|b| b.is_current_version.unwrap_or_default())
+                    .unwrap()
+                    .clone();
+                curr_blob.properties.creation_time = v
+                    .into_iter()
+                    .min_by(|x, y| x.properties.creation_time.cmp(&y.properties.creation_time))
+                    .map(|b| b.properties.creation_time)
+                    .unwrap();
+                curr_blob
+            })
+            .filter_map(|blob| BlogMetaData::try_from(blob).ok())
+            .collect())
+    }
+
+    pub async fn create_or_update_blog_post(
+        &self,
+        id: &String,
+        lang: &Country,
+        value: &BlogData,
+    ) -> Result<(), Error> {
+        let lang = lang.key().to_string();
+        let meta: Metadata = value.meta.clone().into();
+        let tags: Tags = value.meta.tags.clone().into();
+        Ok(self
+            .client
+            .clone()
+            .blob_client(
+                Self::BLOG_CONTAINER.to_string(),
+                format!("{}/{}.md", id, &lang),
+            )
+            .put_block_blob(value.content.as_bytes().to_vec())
+            .metadata(meta)
+            .tags(tags)
+            .content_type("text/markdown; charset=utf-8")
+            .content_language(lang)
+            .await
+            .map(|_| ())?)
     }
 }
