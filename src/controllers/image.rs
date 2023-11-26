@@ -1,11 +1,15 @@
 use super::controller::Controller;
-use crate::{auth::claims::Claims, services::azure_blob::AzureBlobService};
+use crate::{
+    auth::claims::{AdminClaims, Claims},
+    services::azure_blob::AzureBlobService,
+};
 use petompp_web_models::{
     error::{ApiError, Error},
     models::api_response::ApiResponse,
 };
 use rocket::{
     data::{Limits, ToByteUnit},
+    delete, get,
     http::{ContentType, Status},
     put, routes,
     serde::json::Json,
@@ -20,12 +24,21 @@ impl Controller for ImageController {
     }
 
     fn routes(&self) -> Vec<rocket::Route> {
-        routes![upload]
+        routes![upload, get_all, delete]
     }
 }
 
-#[put("/", data = "<img>")]
+#[get("/")]
+async fn get_all(
+    blob_service: &State<AzureBlobService>,
+) -> Result<Json<ApiResponse<Vec<String>>>, ApiError> {
+    Ok(Json(ApiResponse::ok(blob_service.get_image_paths().await?)))
+}
+
+#[put("/?<folder>&<filename>", data = "<img>")]
 async fn upload<'a>(
+    folder: &'a str,
+    filename: Option<&'a str>,
     _claims: Claims,
     content_type: &ContentType,
     limits: &Limits,
@@ -38,9 +51,12 @@ async fn upload<'a>(
     let Some(ext) = content_type.extension() else {
         return Err(Error::from(Status::BadRequest).into());
     };
-    let filename = format!("{}.{}", uuid::Uuid::new_v4(), ext);
+    let filename = match filename {
+        Some(filename) => format!("{}.{}", filename, ext),
+        None => format!("{}.{}", uuid::Uuid::new_v4(), ext),
+    };
     let data = img
-        .open(limits.get("file").unwrap_or(5.mebibytes()))
+        .open(limits.get("file").unwrap_or(20.mebibytes()))
         .into_bytes()
         .await
         .map_err(|_| Error::from(Status::InternalServerError))?;
@@ -48,7 +64,23 @@ async fn upload<'a>(
         return Err(Error::from(Status::PayloadTooLarge).into());
     }
     blob_service
-        .upload_img(filename.clone(), data.to_vec(), content_type.to_string())
+        .upload_img(
+            filename.clone(),
+            folder.to_string(),
+            data.to_vec(),
+            content_type.to_string(),
+        )
         .await?;
     Ok(Json(ApiResponse::ok(filename)))
+}
+
+#[delete("/?<pattern>")]
+async fn delete<'a>(
+    pattern: &'a str,
+    _claims: AdminClaims,
+    blob_service: &State<AzureBlobService>,
+) -> Result<Json<ApiResponse<'a, usize>>, ApiError<'a>> {
+    Ok(Json(ApiResponse::ok(
+        blob_service.delete_img(pattern.to_string()).await?,
+    )))
 }
