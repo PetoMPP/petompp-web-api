@@ -40,24 +40,67 @@ impl AzureBlobService {
     }
 
     const IMAGE_CONTAINER: &str = "image-upload";
+    pub async fn get_image_paths(&self) -> Result<Vec<String>, Error> {
+        let mut stream = self
+            .client
+            .clone()
+            .blob_service_client()
+            .container_client(Self::IMAGE_CONTAINER.to_string())
+            .list_blobs()
+            .into_stream();
+        let mut result = Vec::new();
+        while let Some(resp) = stream.next().await {
+            for blob in resp?.blobs.blobs().cloned() {
+                if blob.properties.content_type.starts_with("image/") {
+                    result.push(blob.name);
+                }
+            }
+        }
+        Ok(result)
+    }
+
     pub async fn upload_img(
         &self,
         name: String,
+        folder: String,
         data: Vec<u8>,
         content_type: String,
     ) -> Result<(), Error> {
-        const IMAGE_FOLDER: &str = "editor";
         Ok(self
             .client
             .clone()
             .blob_client(
                 Self::IMAGE_CONTAINER.to_string(),
-                format!("{}/{}", IMAGE_FOLDER, name),
+                format!("{}/{}", folder, name),
             )
             .put_block_blob(data)
             .content_type(content_type)
             .await
             .map(|_| ())?)
+    }
+
+    pub async fn delete_img(&self, pattern: String) -> Result<usize, Error> {
+        Ok(self
+            .client
+            .clone()
+            .blob_service_client()
+            .container_client(Self::IMAGE_CONTAINER.to_string())
+            .list_blobs()
+            .prefix(pattern)
+            .into_stream()
+            .fold(Result::<_, Error>::Ok(0), |acc, resp| async move {
+                let mut count = acc?;
+                for blob in resp?.blobs.blobs().cloned() {
+                    self.client
+                        .clone()
+                        .blob_client(Self::IMAGE_CONTAINER.to_string(), blob.name)
+                        .delete()
+                        .await?;
+                    count += 1;
+                }
+                Ok(count)
+            })
+            .await?)
     }
 
     const BLOG_CONTAINER: &str = "blog";

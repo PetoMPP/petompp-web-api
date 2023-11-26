@@ -1,5 +1,5 @@
 use super::controller::Controller;
-use crate::services::azure_blob::AzureBlobService;
+use crate::{auth::claims::AdminClaims, services::azure_blob::AzureBlobService};
 use petompp_web_models::{
     error::{ApiError, Error, ValidationError},
     models::{
@@ -24,6 +24,7 @@ impl Controller for BlogController {
 
 #[post("/<name>/<lang>", data = "<value>")]
 async fn create_or_update<'a>(
+    _claims: AdminClaims,
     name: &'a str,
     lang: &'a str,
     blob_service: &'a State<AzureBlobService>,
