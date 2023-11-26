@@ -2,7 +2,7 @@
 form = "64 kB"
 json = "1 MiB"
 msgpack = "2 MiB"
-file = "5 MiB"
+file = "20 MiB"
 
 [default]
 address = "0.0.0.0"
