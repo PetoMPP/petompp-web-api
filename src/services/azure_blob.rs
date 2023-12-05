@@ -79,28 +79,48 @@ impl AzureBlobService {
             .map(|_| ())?)
     }
 
-    pub async fn delete_img(&self, pattern: String) -> Result<usize, Error> {
+    async fn delete(&self, container: String, pattern: String) -> Result<usize, Error> {
         Ok(self
             .client
             .clone()
             .blob_service_client()
-            .container_client(Self::IMAGE_CONTAINER.to_string())
+            .container_client(container.clone())
             .list_blobs()
             .prefix(pattern)
             .into_stream()
-            .fold(Result::<_, Error>::Ok(0), |acc, resp| async move {
-                let mut count = acc?;
-                for blob in resp?.blobs.blobs().cloned() {
-                    self.client
-                        .clone()
-                        .blob_client(Self::IMAGE_CONTAINER.to_string(), blob.name)
-                        .delete()
-                        .await?;
-                    count += 1;
+            .fold(Result::<_, Error>::Ok(0), |acc, resp| {
+                let container = container.clone();
+                async move {
+                    let mut count = acc?;
+                    for blob in resp?.blobs.blobs().cloned() {
+                        self.client
+                            .clone()
+                            .blob_client(container.clone(), blob.name)
+                            .delete()
+                            .await?;
+                        count += 1;
+                    }
+                    Ok(count)
                 }
-                Ok(count)
             })
             .await?)
+    }
+
+    pub async fn delete_img(&self, pattern: String) -> Result<usize, Error> {
+        Self::delete(self, Self::IMAGE_CONTAINER.to_string(), pattern).await
+    }
+
+    pub async fn delete_blog_post(
+        &self,
+        id: &String,
+        lang: &Country,
+    ) -> Result<usize, Error> {
+        Self::delete(
+            self,
+            Self::BLOG_CONTAINER.to_string(),
+            format!("{}/{}.md", id, lang.key()),
+        )
+        .await
     }
 
     const BLOG_CONTAINER: &str = "blog";
@@ -135,8 +155,11 @@ impl AzureBlobService {
         BlogMetaData::try_from(curr)
     }
 
-    pub async fn get_all_blog_meta(&self) -> Result<Vec<BlogMetaData>, Error> {
-        let mut stream = self
+    pub async fn get_all_blog_meta(
+        &self,
+        prefix: Option<String>,
+    ) -> Result<Vec<BlogMetaData>, Error> {
+        let mut builder = self
             .client
             .clone()
             .blob_service_client()
@@ -144,8 +167,11 @@ impl AzureBlobService {
             .list_blobs()
             .include_metadata(true)
             .include_tags(true)
-            .include_versions(true)
-            .into_stream();
+            .include_versions(true);
+        if let Some(prefix) = prefix {
+            builder = builder.prefix(prefix);
+        }
+        let mut stream = builder.into_stream();
         let mut result = HashMap::new();
         while let Some(resp) = stream.next().await {
             for blob in resp?.blobs.blobs().cloned() {
