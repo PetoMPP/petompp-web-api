@@ -5,7 +5,7 @@ use crate::{
 };
 use petompp_web_models::{
     error::{ApiError, Error, ResourceDataValidationError, ValidationError},
-    models::{api_response::ApiResponse, resource_data::ResourceData},
+    models::{api_response::ApiResponse, country::Country, resource_data::ResourceData},
 };
 use rocket::{delete, get, post, put, routes, serde::json::Json};
 
@@ -17,17 +17,17 @@ impl Controller for ResourcesController {
     }
 
     fn routes(&self) -> Vec<rocket::Route> {
-        routes![get, get_all_keys, create, update, delete]
+        routes![get, get_all_keys, create, update, delete, delete_lang]
     }
 }
 
 #[get("/<key>?<lang>")]
 async fn get<'a>(
     key: &'a str,
-    lang: &'a str,
+    lang: Country,
     pool: &dyn ResourcesRepo,
-) -> Result<Json<ApiResponse<'a, String>>, ApiError<'a>> {
-    Ok(Json(ApiResponse::ok(pool.get(key, lang)?)))
+) -> Result<Json<ApiResponse<'a, (Country, String)>>, ApiError<'a>> {
+    Ok(Json(ApiResponse::ok(pool.get(key, &lang)?)))
 }
 
 #[get("/keys")]
@@ -77,11 +77,22 @@ async fn update<'a>(
 }
 
 #[delete("/<key>")]
-async fn delete(
+async fn delete<'a>(
     _admin_claims: AdminClaims,
-    key: &str,
+    key: &'a str,
     pool: &dyn ResourcesRepo,
-) -> Result<&'static str, ApiError<'static>> {
+) -> Result<Json<ApiResponse<'a, &'a str>>, ApiError<'a>> {
     pool.delete(key)?;
-    Ok("OK")
+    Ok(Json(ApiResponse::ok("ok")))
+}
+
+#[delete("/<key>?<lang>")]
+async fn delete_lang<'a>(
+    _admin_claims: AdminClaims,
+    key: &'a str,
+    lang: Country,
+    pool: &dyn ResourcesRepo,
+) -> Result<Json<ApiResponse<'a, &'a str>>, ApiError<'a>> {
+    pool.delete_lang(key, &lang)?;
+    Ok(Json(ApiResponse::ok("ok")))
 }

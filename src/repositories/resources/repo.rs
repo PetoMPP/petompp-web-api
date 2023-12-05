@@ -1,14 +1,18 @@
 use crate::{models::resource_data::Resource, schema::resources, PgPool};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use petompp_web_models::error::{Error, ResourceDataValidationError, ValidationError};
+use petompp_web_models::{
+    error::{Error, ResourceDataValidationError, ValidationError},
+    models::country::Country,
+};
 use rocket::{async_trait, http::Status, outcome::Outcome, request::FromRequest, Request};
 
 pub trait ResourcesRepo: Send + Sync {
-    fn get(&self, key: &str, lang: &str) -> Result<String, Error>;
+    fn get(&self, key: &str, lang: &Country) -> Result<(Country, String), Error>;
     fn get_all(&self) -> Result<Vec<Resource>, Error>;
     fn create(&self, data: &Resource) -> Result<Resource, Error>;
     fn update(&self, data: &Resource) -> Result<Resource, Error>;
     fn delete(&self, key: &str) -> Result<(), Error>;
+    fn delete_lang(&self, key: &str, lang: &Country) -> Result<(), Error>;
 }
 
 #[async_trait]
@@ -24,19 +28,22 @@ impl<'r> FromRequest<'r> for &'r dyn ResourcesRepo {
 }
 
 impl ResourcesRepo for PgPool {
-    fn get(&self, key: &str, lang: &str) -> Result<String, Error> {
+    fn get(&self, key: &str, lang: &Country) -> Result<(Country, String), Error> {
         let mut conn = self.get()?;
         let q = resources::dsl::resources.filter(resources::key.eq(key));
-        let res = match lang {
-            "pl" => {
-                let (pl, en) = q
-                    .select((resources::pl, resources::en))
-                    .get_result::<(Option<String>, String)>(&mut conn)?;
-                pl.unwrap_or(en)
-            }
-            _ => q.select(resources::en).get_result::<String>(&mut conn)?,
-        };
-        Ok(res)
+        Ok(match lang {
+            Country::Poland => q
+                .select((resources::pl, resources::en))
+                .get_result::<(Option<String>, String)>(&mut conn)
+                .map(|(pl, en)| match pl {
+                    Some(pl) => (Country::Poland, pl),
+                    None => (Country::UnitedKingdom, en),
+                })?,
+            _ => q
+                .select(resources::en)
+                .get_result::<String>(&mut conn)
+                .map(|en| (Country::UnitedKingdom, en))?,
+        })
     }
 
     fn get_all(&self) -> Result<Vec<Resource>, Error> {
@@ -87,6 +94,18 @@ impl ResourcesRepo for PgPool {
         let mut conn = self.get()?;
         diesel::delete(resources::dsl::resources.filter(resources::dsl::key.eq(key)))
             .execute(&mut conn)?;
+        Ok(())
+    }
+
+    fn delete_lang(&self, key: &str, lang: &Country) -> Result<(), Error> {
+        let mut conn = self.get()?;
+        match lang {
+            Country::UnitedKingdom => return Err(Error::ValidationError(ValidationError::Country)),
+            Country::Poland => diesel::update(resources::dsl::resources)
+                .filter(resources::dsl::key.eq(key))
+                .set(resources::dsl::pl.eq::<Option<String>>(None))
+                .execute(&mut conn)?,
+        };
         Ok(())
     }
 }
