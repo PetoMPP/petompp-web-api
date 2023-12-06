@@ -1,22 +1,21 @@
+use crate::controllers::controller::ControllerRegisterer;
 use crate::controllers::users::UsersController;
-use crate::controllers::{controller::ControllerRegisterer, response::ApiResponse};
+use controllers::blog::BlogController;
 use controllers::image::ImageController;
 use controllers::resources::ResourcesController;
 use diesel::{
     r2d2::{ConnectionManager, Pool},
     PgConnection,
 };
-use error::Error;
+use petompp_web_models::{error::Error, models::api_response::ApiResponse};
 use repositories::{resources::repo::ResourcesRepo, user::repo::UserRepo};
 use rocket::{catch, http::Status, serde::json::Json, Build, Rocket};
 use rocket::{catchers, Request};
 use services::azure_blob::{AzureBlobSecrets, AzureBlobService};
-use services::filename::FilenameService;
 use std::env;
 
 pub mod auth;
 pub mod controllers;
-pub mod error;
 pub mod models;
 pub mod repositories;
 pub mod schema;
@@ -56,6 +55,7 @@ pub fn build_rocket(
         .add(UsersController)
         .add(ResourcesController)
         .add(ImageController)
+        .add(BlogController)
         .mount("/", rocket_cors::catch_all_options_routes())
         .register("/", catchers![err])
         .attach(cors.clone())
@@ -64,7 +64,6 @@ pub fn build_rocket(
         .manage(user_repo)
         .manage(resources_repo)
         .manage(AzureBlobService::new(AzureBlobSecrets::default()))
-        .manage(FilenameService::default())
 }
 
 pub fn get_connection_pool(secrets: &Secrets) -> PgPool {

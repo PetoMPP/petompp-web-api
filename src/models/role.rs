@@ -3,15 +3,13 @@ use diesel::{
 };
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
-use serde::{Deserialize, Serialize};
+use petompp_web_models::models::user::RoleData;
 use std::{fmt::Display, io::Write};
 use strum_macros::{EnumIter, EnumString};
 
 #[derive(
     Default,
     Debug,
-    Serialize,
-    Deserialize,
     Clone,
     Copy,
     EnumString,
@@ -51,5 +49,14 @@ impl FromSql<Integer, Pg> for Role {
 impl Display for Role {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{:?}", self))
+    }
+}
+
+impl Into<RoleData> for Role {
+    fn into(self) -> RoleData {
+        match self {
+            Role::User => RoleData::User,
+            Role::Admin => RoleData::Admin,
+        }
     }
 }

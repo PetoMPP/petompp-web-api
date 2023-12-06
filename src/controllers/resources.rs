@@ -1,12 +1,12 @@
+use super::controller::Controller;
 use crate::{
-    auth::claims::AdminClaims,
-    controllers::response::ApiResponse,
-    error::{ApiError, Error, ResourceDataValidationError, ValidationError},
-    models::resource_data::ResourceData,
+    auth::claims::AdminClaims, models::resource_data::Resource,
     repositories::resources::repo::ResourcesRepo,
 };
-
-use super::controller::Controller;
+use petompp_web_models::{
+    error::{ApiError, Error, ResourceDataValidationError, ValidationError},
+    models::{api_response::ApiResponse, country::Country, resource_data::ResourceData},
+};
 use rocket::{delete, get, post, put, routes, serde::json::Json};
 
 pub struct ResourcesController;
@@ -17,17 +17,17 @@ impl Controller for ResourcesController {
     }
 
     fn routes(&self) -> Vec<rocket::Route> {
-        routes![get, get_all_keys, create, update, delete]
+        routes![get, get_all_keys, create, update, delete, delete_lang]
     }
 }
 
 #[get("/<key>?<lang>")]
 async fn get<'a>(
     key: &'a str,
-    lang: &'a str,
+    lang: Country,
     pool: &dyn ResourcesRepo,
-) -> Result<Json<ApiResponse<'a, String>>, ApiError<'a>> {
-    Ok(Json(ApiResponse::ok(pool.get(key, lang)?)))
+) -> Result<Json<ApiResponse<'a, (Country, String)>>, ApiError<'a>> {
+    Ok(Json(ApiResponse::ok(pool.get(key, &lang)?)))
 }
 
 #[get("/keys")]
@@ -49,11 +49,11 @@ async fn create<'a>(
     value: Json<ResourceData>,
     pool: &dyn ResourcesRepo,
 ) -> Result<Json<ApiResponse<'a, ResourceData>>, ApiError<'a>> {
-    let value = ResourceData {
+    let value = Resource {
         key: Some(key.to_string()),
-        ..value.into_inner()
+        ..value.into_inner().into()
     };
-    Ok(Json(ApiResponse::ok(pool.create(&value)?)))
+    Ok(Json(ApiResponse::ok(pool.create(&value)?.into())))
 }
 
 #[post("/<key>", data = "<value>")]
@@ -63,28 +63,36 @@ async fn update<'a>(
     value: Json<ResourceData>,
     pool: &dyn ResourcesRepo,
 ) -> Result<Json<ApiResponse<'a, ResourceData>>, ApiError<'a>> {
-    if key != value.key.as_ref().unwrap().as_str() {
+    if key != value.key.as_str() {
         return Err(Error::ValidationError(ValidationError::ResourceData(
-            ResourceDataValidationError::KeyMismatch(
-                key.to_string(),
-                value.key.as_ref().unwrap().clone(),
-            ),
+            ResourceDataValidationError::KeyMismatch(key.to_string(), value.key.clone()),
         ))
         .into());
     }
-    let value = ResourceData {
+    let value = Resource {
         key: Some(key.to_string()),
-        ..value.into_inner()
+        ..value.into_inner().into()
     };
-    Ok(Json(ApiResponse::ok(pool.update(&value)?)))
+    Ok(Json(ApiResponse::ok(pool.update(&value)?.into())))
 }
 
 #[delete("/<key>")]
-async fn delete(
+async fn delete<'a>(
     _admin_claims: AdminClaims,
-    key: &str,
+    key: &'a str,
     pool: &dyn ResourcesRepo,
-) -> Result<&'static str, ApiError<'static>> {
+) -> Result<Json<ApiResponse<'a, &'a str>>, ApiError<'a>> {
     pool.delete(key)?;
-    Ok("OK")
+    Ok(Json(ApiResponse::ok("ok")))
+}
+
+#[delete("/<key>?<lang>")]
+async fn delete_lang<'a>(
+    _admin_claims: AdminClaims,
+    key: &'a str,
+    lang: Country,
+    pool: &dyn ResourcesRepo,
+) -> Result<Json<ApiResponse<'a, &'a str>>, ApiError<'a>> {
+    pool.delete_lang(key, &lang)?;
+    Ok(Json(ApiResponse::ok("ok")))
 }
