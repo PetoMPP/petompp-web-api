@@ -14,11 +14,17 @@ fn rocket() -> _ {
         static ref SECRETS: Secrets = Secrets::default();
         static ref USER_REPO: PgPool = get_connection_pool(&SECRETS);
         static ref RESOURCES_REPO: PgPool = get_connection_pool(&SECRETS);
+        static ref USER_SETTINGS_REPO: PgPool = get_connection_pool(&SECRETS);
     }
 
     {
         let mut conn = PgConnection::establish(&SECRETS.database_url).unwrap();
         conn.run_pending_migrations(MIGRATIONS).unwrap();
     }
-    build_rocket(&SECRETS, &*USER_REPO, &*RESOURCES_REPO)
+    build_rocket(
+        &SECRETS,
+        &*USER_REPO,
+        &*RESOURCES_REPO,
+        &*USER_SETTINGS_REPO,
+    )
 }
