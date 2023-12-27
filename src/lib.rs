@@ -3,12 +3,15 @@ use crate::controllers::users::UsersController;
 use controllers::blog::BlogController;
 use controllers::image::ImageController;
 use controllers::resources::ResourcesController;
+use controllers::user_settings::UserSettingsController;
 use diesel::{
     r2d2::{ConnectionManager, Pool},
     PgConnection,
 };
 use petompp_web_models::{error::Error, models::api_response::ApiResponse};
-use repositories::{resources::repo::ResourcesRepo, user::repo::UserRepo};
+use repositories::{
+    resources::repo::ResourcesRepo, user::repo::UserRepo, user_settings::repo::UserSettingsRepo,
+};
 use rocket::{catch, http::Status, serde::json::Json, Build, Rocket};
 use rocket::{catchers, Request};
 use services::azure_blob::{AzureBlobSecrets, AzureBlobService};
@@ -45,6 +48,7 @@ pub fn build_rocket(
     secrets: &Secrets,
     user_repo: &'static dyn UserRepo,
     resources_repo: &'static dyn ResourcesRepo,
+    user_settings_repo: &'static dyn UserSettingsRepo,
 ) -> Rocket<Build> {
     let cors = rocket_cors::CorsOptions::default()
         .allow_credentials(true)
@@ -56,6 +60,7 @@ pub fn build_rocket(
         .add(ResourcesController)
         .add(ImageController)
         .add(BlogController)
+        .add(UserSettingsController)
         .mount("/", rocket_cors::catch_all_options_routes())
         .register("/", catchers![err])
         .attach(cors.clone())
@@ -63,6 +68,7 @@ pub fn build_rocket(
         .manage(secrets.clone())
         .manage(user_repo)
         .manage(resources_repo)
+        .manage(user_settings_repo)
         .manage(AzureBlobService::new(AzureBlobSecrets::default()))
 }
 
