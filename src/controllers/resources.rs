@@ -64,7 +64,7 @@ async fn update<'a>(
     pool: &dyn ResourcesRepo,
 ) -> Result<Json<ApiResponse<'a, ResourceData>>, ApiError<'a>> {
     if key != value.key.as_str() {
-        return Err(Error::ValidationError(ValidationError::ResourceData(
+        return Err(Error::Validation(ValidationError::ResourceData(
             ResourceDataValidationError::KeyMismatch(key.to_string(), value.key.clone()),
         ))
         .into());
