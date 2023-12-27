@@ -1,7 +1,7 @@
 use super::{password::Password, role::Role, user_name::UserName};
 use crate::schema::users;
 use diesel::prelude::*;
-use petompp_web_models::{error::Error, models::user::UserData};
+use petompp_web_models::models::user::UserData;
 
 #[derive(Default, Queryable, Insertable, Clone)]
 pub struct User {
@@ -18,17 +18,18 @@ pub struct User {
 }
 
 impl User {
-    pub fn new(name: String, password: String, role: Role) -> Result<Self, Error> {
-        let name = UserName::new(name)?;
+    pub fn new(name: String, password: String, role: Role) -> Self {
+        let name = name.trim();
+        let name = UserName(name.to_string());
         let normalized_name = name.to_lowercase();
-        let password = Password::new(password)?;
-        Ok(Self {
+        let password = Password::new(password);
+        Self {
             name,
             normalized_name,
             password,
             role,
             ..Default::default()
-        })
+        }
     }
 }
 

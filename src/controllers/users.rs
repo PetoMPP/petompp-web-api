@@ -7,10 +7,13 @@ use crate::{
     models::{role::Role, user::User},
     repositories::{query_config::QueryConfig, user::repo::UserRepo},
 };
-use petompp_web_models::models::api_response::ApiResponse;
 use petompp_web_models::{
-    error::{ApiError, AuthError, Error},
-    models::{credentials::Credentials, user::UserData},
+    error::{ApiError, AuthError, Error, RegisterError, UserError},
+    models::{
+        api_response::ApiResponse, credentials::Credentials,
+        password_requirements::PasswordRequirements, requirement::Requirements, user::UserData,
+        username_requirements::UsernameRequirements,
+    },
 };
 use rocket::{delete, get, post, routes, serde::json::Json, State};
 use serde::{Deserialize, Serialize};
@@ -32,11 +35,28 @@ fn create(
     credentials: Json<Credentials>,
     pool: &dyn UserRepo,
 ) -> Result<Json<ApiResponse<UserData>>, ApiError> {
+    let username_errors = match UsernameRequirements::default().validate(&credentials.name.as_str())
+    {
+        Ok(_) => Vec::new(),
+        Err(e) => e.into_iter().map(|e| e.to_string()).collect::<Vec<_>>(),
+    };
+    let password_errors =
+        match PasswordRequirements::default().validate(&credentials.password.as_str()) {
+            Ok(_) => Vec::new(),
+            Err(e) => e.into_iter().map(|e| e.to_string()).collect::<Vec<_>>(),
+        };
+    if !username_errors.is_empty() || !password_errors.is_empty() {
+        return Err(Error::Register(RegisterError {
+            username_errors,
+            password_errors,
+        })
+        .into());
+    }
     let user = User::new(
         credentials.name.clone(),
         credentials.password.clone(),
         Role::User,
-    )?;
+    );
     let user = pool.create(&user)?;
     Ok(Json(ApiResponse::ok(user.into())))
 }
@@ -53,17 +73,12 @@ async fn login<'a>(
     pool: &'a dyn UserRepo,
     secrets: &State<crate::Secrets>,
 ) -> Result<Json<ApiResponse<'a, LoginResponse>>, ApiError<'a>> {
-    let user = pool
-        .get_by_name(credentials.name.to_ascii_lowercase())
-        .map_err(|e| match e {
-            Error::UserNotFound(_) => Error::InvalidCredentials,
-            _ => e,
-        })?;
-    if !user.password.verify(credentials.password.clone()) {
-        return Err(Error::InvalidCredentials.into());
-    }
+    let user = match pool.get_by_name(credentials.name.to_ascii_lowercase())? {
+        Some(user) if user.password.verify(credentials.password.clone()) => user,
+        _ => return Err(Error::User(UserError::InvalidCredentials).into()),
+    };
     if !user.confirmed {
-        return Err(Error::UserNotConfirmed(credentials.name.to_string()).into());
+        return Err(Error::User(UserError::NotConfirmed(credentials.name.to_string())).into());
     }
     let token = create_token(secrets, &user).map_err(<AuthError as Into<Error>>::into)?;
     Ok(Json(ApiResponse::ok(LoginResponse {
@@ -77,7 +92,9 @@ async fn get_self(
     claims: Claims,
     pool: &dyn UserRepo,
 ) -> Result<Json<ApiResponse<UserData>>, ApiError> {
-    let user = pool.get_by_id(claims.sub)?;
+    let user = pool
+        .get_by_id(claims.sub)?
+        .ok_or_else(|| Error::User(UserError::NotFound(claims.sub.to_string())))?;
     Ok(Json(ApiResponse::ok(user.into())))
 }
 
@@ -101,7 +118,9 @@ async fn activate(
     id: i32,
     pool: &dyn UserRepo,
 ) -> Result<Json<ApiResponse<UserData>>, ApiError> {
-    let user = pool.activate(id)?;
+    let user = pool
+        .activate(id)?
+        .ok_or_else(|| Error::User(UserError::NotFound(id.to_string())))?;
     Ok(Json(ApiResponse::ok(user.into())))
 }
 
@@ -111,6 +130,8 @@ async fn delete(
     id: i32,
     pool: &dyn UserRepo,
 ) -> Result<Json<ApiResponse<UserData>>, ApiError> {
-    let user = pool.delete(id)?;
+    let user = pool
+        .delete(id)?
+        .ok_or_else(|| Error::User(UserError::NotFound(id.to_string())))?;
     Ok(Json(ApiResponse::ok(user.into())))
 }
