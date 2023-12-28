@@ -1355,8 +1355,8 @@ dependencies = [
 
 [[package]]
 name = "petompp-web-models"
-version = "0.5.2"
-source = "git+https://github.com/PetoMPP/petompp-web-models.git?branch=0.5.2#7c9c04df7d846b660c59a0b5391702fbc4ea7f3e"
+version = "0.5.5"
+source = "git+https://github.com/PetoMPP/petompp-web-models.git?branch=0.5.5#d6a3a1b5c99cb3b4a8ecebe5e8c0c7e069f42dda"
 dependencies = [
  "azure_core",
  "azure_storage",
