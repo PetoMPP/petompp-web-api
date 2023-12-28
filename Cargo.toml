@@ -18,7 +18,7 @@ jwt = "0.16"
 lazy_static = "1.4"
 num-traits = "0.2"
 num-derive = "0.4"
-petompp-web-models = { git = "https://github.com/PetoMPP/petompp-web-models.git", branch = "0.5.2", features = [
+petompp-web-models = { git = "https://github.com/PetoMPP/petompp-web-models.git", branch = "0.5.5", features = [
     "api-errors",
 ] }
 r2d2 = "0.8"
