@@ -1,3 +1,4 @@
+use crate::UserSettingsRepo;
 use crate::{
     auth::{
         claims::{AdminClaims, Claims},
@@ -12,10 +13,10 @@ use petompp_web_models::{
     models::{
         api_response::ApiResponse, credentials::Credentials,
         password_requirements::PasswordRequirements, requirement::Requirements, user::UserData,
-        username_requirements::UsernameRequirements,
+        user_settings_dto::UserSettingsDto, username_requirements::UsernameRequirements,
     },
 };
-use rocket::{delete, get, post, routes, serde::json::Json, State};
+use rocket::{delete, get, http::Status, post, routes, serde::json::Json, State};
 use serde::{Deserialize, Serialize};
 
 pub struct UsersController;
@@ -31,20 +32,23 @@ impl Controller for UsersController {
 }
 
 #[post("/", data = "<credentials>")]
-fn create(
+fn create<'a>(
     credentials: Json<Credentials>,
-    pool: &dyn UserRepo,
-) -> Result<Json<ApiResponse<UserData>>, ApiError> {
-    let username_errors = match UsernameRequirements::default().validate(&credentials.name.as_str())
-    {
+    pool: &'a dyn UserRepo,
+    settings_pool: &'a dyn UserSettingsRepo,
+) -> Result<Json<ApiResponse<'a, UserData>>, ApiError<'a>> {
+    let dto: UserSettingsDto = settings_pool.get()?.into();
+    let (username_req, password_req): (UsernameRequirements, PasswordRequirements) = dto
+        .try_into()
+        .map_err(|_| Error::Status(500, Status::InternalServerError.to_string()))?;
+    let username_errors = match username_req.validate(&credentials.name.as_str()) {
         Ok(_) => Vec::new(),
         Err(e) => e.into_iter().map(|e| e.to_string()).collect::<Vec<_>>(),
     };
-    let password_errors =
-        match PasswordRequirements::default().validate(&credentials.password.as_str()) {
-            Ok(_) => Vec::new(),
-            Err(e) => e.into_iter().map(|e| e.to_string()).collect::<Vec<_>>(),
-        };
+    let password_errors = match password_req.validate(&credentials.password.as_str()) {
+        Ok(_) => Vec::new(),
+        Err(e) => e.into_iter().map(|e| e.to_string()).collect::<Vec<_>>(),
+    };
     if !username_errors.is_empty() || !password_errors.is_empty() {
         return Err(Error::Register(RegisterError {
             username_errors,
