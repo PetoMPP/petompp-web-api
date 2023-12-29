@@ -1,4 +1,3 @@
-use diesel::{Connection, PgConnection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use lazy_static::lazy_static;
 use petompp_web_api::{build_rocket, get_connection_pool, PgPool, Secrets};
@@ -12,19 +11,12 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 fn rocket() -> _ {
     lazy_static! {
         static ref SECRETS: Secrets = Secrets::default();
-        static ref USER_REPO: PgPool = get_connection_pool(&SECRETS);
-        static ref RESOURCES_REPO: PgPool = get_connection_pool(&SECRETS);
-        static ref USER_SETTINGS_REPO: PgPool = get_connection_pool(&SECRETS);
+        static ref PG_POOL: PgPool = get_connection_pool(&SECRETS);
     }
 
     {
-        let mut conn = PgConnection::establish(&SECRETS.database_url).unwrap();
+        let mut conn = PG_POOL.get().unwrap();
         conn.run_pending_migrations(MIGRATIONS).unwrap();
     }
-    build_rocket(
-        &SECRETS,
-        &*USER_REPO,
-        &*RESOURCES_REPO,
-        &*USER_SETTINGS_REPO,
-    )
+    build_rocket(&SECRETS, &PG_POOL)
 }
