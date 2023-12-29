@@ -44,16 +44,14 @@ impl Default for Secrets {
     }
 }
 
-pub fn build_rocket(
-    secrets: &Secrets,
-    user_repo: &'static dyn UserRepo,
-    resources_repo: &'static dyn ResourcesRepo,
-    user_settings_repo: &'static dyn UserSettingsRepo,
-) -> Rocket<Build> {
+pub fn build_rocket(secrets: &Secrets, pg_pool: &'static PgPool) -> Rocket<Build> {
     let cors = rocket_cors::CorsOptions::default()
         .allow_credentials(true)
         .to_cors()
         .unwrap();
+    let user_repo: &'static dyn UserRepo = pg_pool;
+    let resources_repo: &'static dyn ResourcesRepo = pg_pool;
+    let user_settings_repo: &'static dyn UserSettingsRepo = pg_pool;    
 
     rocket::build()
         .add(UsersController)
@@ -66,6 +64,7 @@ pub fn build_rocket(
         .attach(cors.clone())
         .manage(cors)
         .manage(secrets.clone())
+        .manage(pg_pool)
         .manage(user_repo)
         .manage(resources_repo)
         .manage(user_settings_repo)
