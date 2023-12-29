@@ -1,16 +1,16 @@
 use super::query::UsersQuery;
 use crate::{models::user::User, repositories::query_config::QueryConfig, schema::users, PgPool};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use petompp_web_models::error::Error;
+use petompp_web_models::error::{Error, UserError};
 use rocket::{async_trait, http::Status, outcome::Outcome, request::FromRequest, Request};
 
 pub trait UserRepo: Send + Sync {
     fn create(&self, user: &User) -> Result<User, Error>;
-    fn get_by_name(&self, normalized_name: String) -> Result<User, Error>;
-    fn get_by_id(&self, id: i32) -> Result<User, Error>;
+    fn get_by_name(&self, normalized_name: String) -> Result<Option<User>, Error>;
+    fn get_by_id(&self, id: i32) -> Result<Option<User>, Error>;
     fn get_all(&self, query_config: &QueryConfig) -> Result<Vec<Vec<User>>, Error>;
-    fn activate(&self, id: i32) -> Result<User, Error>;
-    fn delete(&self, id: i32) -> Result<User, Error>;
+    fn activate(&self, id: i32) -> Result<Option<User>, Error>;
+    fn delete(&self, id: i32) -> Result<Option<User>, Error>;
 }
 
 #[async_trait]
@@ -36,28 +36,20 @@ impl UserRepo for PgPool {
         Ok(user)
     }
 
-    fn get_by_name(&self, normalized_name: String) -> Result<User, Error> {
+    fn get_by_name(&self, normalized_name: String) -> Result<Option<User>, Error> {
         let mut conn = self.get()?;
-        let Some(user) = users::dsl::users
+        Ok(users::dsl::users
             .filter(users::normalized_name.eq(&normalized_name))
             .first::<User>(&mut conn)
-            .optional()?
-        else {
-            return Err(Error::UserNotFound(normalized_name.to_string()));
-        };
-        Ok(user)
+            .optional()?)
     }
 
-    fn get_by_id(&self, id: i32) -> Result<User, Error> {
+    fn get_by_id(&self, id: i32) -> Result<Option<User>, Error> {
         let mut conn = self.get()?;
-        let Some(user) = users::dsl::users
+        Ok(users::dsl::users
             .filter(users::id.eq(id))
             .first::<User>(&mut conn)
-            .optional()?
-        else {
-            return Err(Error::UserNotFound(format!("ID: {}", id)));
-        };
-        Ok(user)
+            .optional()?)
     }
 
     fn get_all(&self, query_config: &QueryConfig) -> Result<Vec<Vec<User>>, Error> {
@@ -67,28 +59,20 @@ impl UserRepo for PgPool {
             .get_results::<User>(&mut conn)?])
     }
 
-    fn activate(&self, id: i32) -> Result<User, Error> {
+    fn activate(&self, id: i32) -> Result<Option<User>, Error> {
         let mut conn = self.get()?;
-        let Some(user) = diesel::update(users::dsl::users.filter(users::id.eq(id)))
+        Ok(diesel::update(users::dsl::users.filter(users::id.eq(id)))
             .set(users::confirmed.eq(true))
             .get_result::<User>(&mut conn)
-            .optional()?
-        else {
-            return Err(Error::UserNotFound(format!("ID: {}", id)));
-        };
-        Ok(user)
+            .optional()?)
     }
 
-    fn delete(&self, id: i32) -> Result<User, Error> {
+    fn delete(&self, id: i32) -> Result<Option<User>, Error> {
         let mut conn = self.get()?;
-        let Some(user) = diesel::update(users::dsl::users.filter(users::id.eq(id)))
+        Ok(diesel::update(users::dsl::users.filter(users::id.eq(id)))
             .set(users::deleted_at.eq(chrono::Utc::now().naive_utc()))
             .get_result::<User>(&mut conn)
-            .optional()?
-        else {
-            return Err(Error::UserNotFound(format!("ID: {}", id)));
-        };
-        Ok(user)
+            .optional()?)
     }
 }
 
@@ -97,7 +81,7 @@ fn unique_vol_as_user_exists(e: diesel::result::Error, name: impl Into<String>) 
         diesel::result::Error::DatabaseError(
             diesel::result::DatabaseErrorKind::UniqueViolation,
             _,
-        ) => Error::UserNameTaken(name.into()),
-        _ => Error::DatabaseError(e.to_string()),
+        ) => Error::User(UserError::NameTaken(name.into())),
+        e => e.into(),
     }
 }

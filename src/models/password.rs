@@ -2,7 +2,6 @@ use diesel::{
     backend::Backend, deserialize::FromSql, expression::AsExpression, pg::Pg, serialize::ToSql,
     sql_types::Text, FromSqlRow,
 };
-use petompp_web_models::{error::Error, models::password_requirements::PasswordRequirements};
 use sha2::{Digest, Sha256};
 use std::io::Write;
 
@@ -14,8 +13,7 @@ pub struct Password {
 }
 
 impl Password {
-    pub fn new(password: String) -> Result<Self, Error> {
-        PasswordRequirements::default().validate(&password)?;
+    pub fn new(password: String) -> Self {
         let mut rng = urandom::csprng();
         let salt: [u8; 16] = rng.next();
         let salt = salt.iter().map(|x| format!("{:x}", x)).collect::<String>();
@@ -24,7 +22,7 @@ impl Password {
         hasher.update(&salty_password);
         let result = hasher.finalize();
         let hash = format!("{:x}", result);
-        Ok(Self { hash, salt })
+        Self { hash, salt }
     }
 
     pub fn verify(&self, password: String) -> bool {

@@ -34,7 +34,7 @@ async fn create_or_update<'a>(
         .create_or_update_blog_post(
             &name.to_string(),
             &Country::try_from(lang)
-                .map_err(|_| ApiError::from(Error::ValidationError(ValidationError::Country)))?,
+                .map_err(|_| ApiError::from(Error::Validation(ValidationError::Country)))?,
             &value.into_inner(),
         )
         .await?;
@@ -52,7 +52,7 @@ async fn delete<'a>(
         .delete_blog_post(
             &name.to_string(),
             &Country::try_from(lang)
-                .map_err(|_| ApiError::from(Error::ValidationError(ValidationError::Country)))?,
+                .map_err(|_| ApiError::from(Error::Validation(ValidationError::Country)))?,
         )
         .await?;
     Ok(Json(ApiResponse::ok("ok")))
@@ -68,9 +68,8 @@ async fn get_meta<'a>(
         blob_service
             .get_blog_meta(
                 &name.to_string(),
-                &Country::try_from(lang).map_err(|_| {
-                    ApiError::from(Error::ValidationError(ValidationError::Country))
-                })?,
+                &Country::try_from(lang)
+                    .map_err(|_| ApiError::from(Error::Validation(ValidationError::Country)))?,
             )
             .await?,
     )))

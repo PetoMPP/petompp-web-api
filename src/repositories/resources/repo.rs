@@ -65,7 +65,7 @@ impl ResourcesRepo for PgPool {
         let key = data
             .key
             .clone()
-            .ok_or(Error::ValidationError(ValidationError::ResourceData(
+            .ok_or(Error::Validation(ValidationError::ResourceData(
                 ResourceDataValidationError::KeyMissing,
             )))?;
         let res = match (&data.en, &data.pl) {
@@ -82,7 +82,7 @@ impl ResourcesRepo for PgPool {
                 .set(resources::dsl::pl.eq(pl))
                 .get_result::<Resource>(&mut conn)?,
             _ => {
-                return Err(Error::ValidationError(ValidationError::ResourceData(
+                return Err(Error::Validation(ValidationError::ResourceData(
                     ResourceDataValidationError::ValueMissing,
                 )))
             }
@@ -100,7 +100,7 @@ impl ResourcesRepo for PgPool {
     fn delete_lang(&self, key: &str, lang: &Country) -> Result<(), Error> {
         let mut conn = self.get()?;
         match lang {
-            Country::UnitedKingdom => return Err(Error::ValidationError(ValidationError::Country)),
+            Country::UnitedKingdom => return Err(Error::Validation(ValidationError::Country)),
             Country::Poland => diesel::update(resources::dsl::resources)
                 .filter(resources::dsl::key.eq(key))
                 .set(resources::dsl::pl.eq::<Option<String>>(None))

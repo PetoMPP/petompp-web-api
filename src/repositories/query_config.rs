@@ -284,7 +284,7 @@ macro_rules! impl_query_config {
                     $name => Ok(sort_by_column(query, $column, order)),
                 )*
                 _ => {
-                    return Err(Error::ValidationError(ValidationError::Query(
+                    return Err(Error::Validation(ValidationError::Query(
                         QueryValidationError::InvalidColumn(column.to_string()),
                     )))
                 }
