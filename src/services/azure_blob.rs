@@ -39,6 +39,16 @@ impl AzureBlobService {
         Self { client }
     }
 
+    pub async fn test_connection(&self) -> Result<(), Error> {
+        self.client
+            .clone()
+            .blob_service_client()
+            .get_account_information()
+            .await
+            .map(|_| ())
+            .map_err(|e| Error::Status(Status::ServiceUnavailable.code, e.to_string()))
+    }
+
     const IMAGE_CONTAINER: &str = "image-upload";
     pub async fn get_image_paths(&self) -> Result<Vec<String>, Error> {
         let mut stream = self
@@ -110,11 +120,7 @@ impl AzureBlobService {
         Self::delete(self, Self::IMAGE_CONTAINER.to_string(), pattern).await
     }
 
-    pub async fn delete_blog_post(
-        &self,
-        id: &String,
-        lang: &Country,
-    ) -> Result<usize, Error> {
+    pub async fn delete_blog_post(&self, id: &String, lang: &Country) -> Result<usize, Error> {
         Self::delete(
             self,
             Self::BLOG_CONTAINER.to_string(),
