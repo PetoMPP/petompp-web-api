@@ -33,15 +33,15 @@ impl User {
     }
 }
 
-impl Into<UserData> for User {
-    fn into(self) -> UserData {
+impl From<User> for UserData {
+    fn from(val: User) -> Self {
         UserData {
-            id: self.id.unwrap(),
-            name: self.name.0.clone(),
-            role: self.role.into(),
-            confirmed: self.confirmed,
-            created_at: self.created_at.unwrap(),
-            deleted_at: self.deleted_at,
+            id: val.id.unwrap(),
+            name: val.name.0.clone(),
+            role: val.role.into(),
+            confirmed: val.confirmed,
+            created_at: val.created_at.unwrap(),
+            deleted_at: val.deleted_at,
         }
     }
 }

@@ -44,18 +44,18 @@ impl From<UserSettingsDto> for UserSettings {
     }
 }
 
-impl Into<UserSettingsDto> for UserSettings {
-    fn into(self) -> UserSettingsDto {
+impl From<UserSettings> for UserSettingsDto {
+    fn from(val: UserSettings) -> Self {
         UserSettingsDto {
-            name_min_length: self.name_min_length,
-            name_max_length: self.name_max_length,
-            name_special_characters: self.name_special_characters,
-            password_min_length: self.password_min_length,
-            password_needed_checks: self.password_needed_checks,
-            password_check_numbers: self.password_check_numbers,
-            password_check_uppercase: self.password_check_uppercase,
-            password_check_lowercase: self.password_check_lowercase,
-            password_check_special_characters: self.password_check_special_characters,
+            name_min_length: val.name_min_length,
+            name_max_length: val.name_max_length,
+            name_special_characters: val.name_special_characters,
+            password_min_length: val.password_min_length,
+            password_needed_checks: val.password_needed_checks,
+            password_check_numbers: val.password_check_numbers,
+            password_check_uppercase: val.password_check_uppercase,
+            password_check_lowercase: val.password_check_lowercase,
+            password_check_special_characters: val.password_check_special_characters,
         }
     }
 }

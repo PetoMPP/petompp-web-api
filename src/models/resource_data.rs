@@ -11,12 +11,12 @@ pub struct Resource {
     pub pl: Option<String>,
 }
 
-impl Into<ResourceData> for Resource {
-    fn into(self) -> ResourceData {
+impl From<Resource> for ResourceData {
+    fn from(val: Resource) -> Self {
         ResourceData {
-            key: self.key.unwrap(),
-            en: self.en,
-            pl: self.pl,
+            key: val.key.unwrap(),
+            en: val.en,
+            pl: val.pl,
         }
     }
 }

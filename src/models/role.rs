@@ -52,9 +52,9 @@ impl Display for Role {
     }
 }
 
-impl Into<RoleData> for Role {
-    fn into(self) -> RoleData {
-        match self {
+impl From<Role> for RoleData {
+    fn from(val: Role) -> Self {
+        match val {
             Role::User => RoleData::User,
             Role::Admin => RoleData::Admin,
         }

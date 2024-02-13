@@ -19,19 +19,19 @@ impl Controller for UserSettingsController {
 }
 
 #[get("/")]
-async fn get<'a>(
-    pool: &'a dyn UserSettingsRepo,
-) -> Result<Json<ApiResponse<'a, UserSettingsDto>>, ApiError<'a>> {
+async fn get(
+    pool: &dyn UserSettingsRepo,
+) -> Result<Json<ApiResponse<UserSettingsDto>>, ApiError> {
     let settings = pool.get()?;
     Ok(Json(ApiResponse::ok(settings.into())))
 }
 
 #[post("/", data = "<settings>")]
-async fn update<'a>(
+async fn update(
     _claims: AdminClaims,
     settings: Json<UserSettingsDto>,
-    pool: &'a dyn UserSettingsRepo,
-) -> Result<Json<ApiResponse<'a, UserSettingsDto>>, ApiError<'a>> {
+    pool: &dyn UserSettingsRepo,
+) -> Result<Json<ApiResponse<UserSettingsDto>>, ApiError> {
     let settings = pool.update(&settings.into_inner().into())?;
     Ok(Json(ApiResponse::ok(settings.into())))
 }
