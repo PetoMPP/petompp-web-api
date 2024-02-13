@@ -1,5 +1,6 @@
 use super::controller::Controller;
-use crate::{services::azure_blob::AzureBlobService, PgPool};
+use crate::{services::azure_test::AzureTestService, PgPool};
+use azure_storage_blobs::prelude::ClientBuilder;
 use diesel::r2d2::R2D2Connection;
 use petompp_web_models::{
     error::{ApiError, Error},
@@ -22,7 +23,7 @@ impl Controller for HealthController {
 #[get("/")]
 async fn health<'a>(
     pool: &'a rocket::State<PgPool>,
-    azure_blob_service: &'a rocket::State<AzureBlobService>,
+    azure_blob_service: &'a rocket::State<ClientBuilder>,
 ) -> Result<Json<ApiResponse<'a, &'a str>>, ApiError<'a>> {
     // test database connection
     let mut conn = pool.get().map_err::<Error, _>(|e| e.into())?;

@@ -1355,8 +1355,8 @@ dependencies = [
 
 [[package]]
 name = "petompp-web-models"
-version = "0.5.5"
-source = "git+https://github.com/PetoMPP/petompp-web-models.git?branch=0.5.5#d6a3a1b5c99cb3b4a8ecebe5e8c0c7e069f42dda"
+version = "0.7.0"
+source = "git+https://github.com/PetoMPP/petompp-web-models.git?branch=0.7.0#a59557462cf34454bc6b39c6b773eeca474f97d0"
 dependencies = [
  "azure_core",
  "azure_storage",
@@ -1370,6 +1370,7 @@ dependencies = [
  "regex",
  "rocket",
  "serde",
+ "serde_json",
  "strum",
 ]
 
