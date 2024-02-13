@@ -1,3 +1,4 @@
+pub mod azure;
 pub mod password;
 pub mod resource_data;
 pub mod role;
