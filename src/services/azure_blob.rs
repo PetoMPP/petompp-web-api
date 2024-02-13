@@ -42,7 +42,7 @@ impl AzureBlobService for ClientBuilder {
             for blob in resp?
                 .blobs
                 .blobs()
-                .filter(|b| &b.name == &filename)
+                .filter(|b| b.name == filename)
                 .cloned()
             {
                 versions.push(blob);
@@ -128,7 +128,7 @@ impl AzureBlobService for ClientBuilder {
         meta: BlobMetaDto,
         data: &[u8],
     ) -> Result<String, Error> {
-        let filename = match meta.filename.ends_with("/") {
+        let filename = match meta.filename.ends_with('/') {
             true => format!(
                 "{}{}{}",
                 meta.filename,

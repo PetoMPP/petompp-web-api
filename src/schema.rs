@@ -42,8 +42,4 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(
-    resources,
-    user_settings,
-    users,
-);
+diesel::allow_tables_to_appear_in_same_query!(resources, user_settings, users,);
