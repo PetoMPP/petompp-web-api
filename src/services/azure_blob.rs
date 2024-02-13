@@ -1,150 +1,50 @@
 use azure_core::request_options::Metadata;
-use azure_storage::prelude::*;
 use azure_storage_blobs::prelude::*;
 use petompp_web_models::{
     error::Error,
-    models::{
-        blog_data::{BlogData, BlogMetaData},
-        country::Country,
-    },
+    models::blob::blob_meta::{BlobMetaData, BlobMetaDto},
 };
-use rocket::{futures::StreamExt, http::Status};
+use rocket::{async_trait, futures::StreamExt, http::Status};
 use std::collections::HashMap;
 
-#[derive(Debug)]
-pub struct AzureBlobSecrets {
-    pub account: String,
-    pub account_key: String,
-}
-
-impl Default for AzureBlobSecrets {
-    fn default() -> Self {
-        Self {
-            account: std::env::var("STORAGE_ACCOUNT").expect("STORAGE_ACCOUNT must be set"),
-            account_key: std::env::var("STORAGE_ACCESS_KEY")
-                .expect("STORAGE_ACCESS_KEY must be set"),
-        }
-    }
-}
-
-pub struct AzureBlobService {
-    client: ClientBuilder,
-}
-
-impl AzureBlobService {
-    pub fn new(secrets: AzureBlobSecrets) -> Self {
-        let creds =
-            StorageCredentials::access_key(secrets.account.clone(), secrets.account_key.clone());
-        let client = ClientBuilder::new(&secrets.account, creds);
-        Self { client }
-    }
-
-    pub async fn test_connection(&self) -> Result<(), Error> {
-        self.client
-            .clone()
-            .blob_service_client()
-            .get_account_information()
-            .await
-            .map(|_| ())
-            .map_err(|e| Error::Status(Status::ServiceUnavailable.code, e.to_string()))
-    }
-
-    const IMAGE_CONTAINER: &str = "image-upload";
-    pub async fn get_image_paths(&self) -> Result<Vec<String>, Error> {
-        let mut stream = self
-            .client
-            .clone()
-            .blob_service_client()
-            .container_client(Self::IMAGE_CONTAINER.to_string())
-            .list_blobs()
-            .into_stream();
-        let mut result = Vec::new();
-        while let Some(resp) = stream.next().await {
-            for blob in resp?.blobs.blobs().cloned() {
-                if blob.properties.content_type.starts_with("image/") {
-                    result.push(blob.name);
-                }
-            }
-        }
-        Ok(result)
-    }
-
-    pub async fn upload_img(
+#[async_trait]
+pub trait AzureBlobService {
+    async fn get(&self, container: String, filename: String) -> Result<BlobMetaData, Error>;
+    async fn get_all(
         &self,
-        name: String,
-        folder: String,
-        data: Vec<u8>,
-        content_type: String,
-    ) -> Result<(), Error> {
-        Ok(self
-            .client
-            .clone()
-            .blob_client(
-                Self::IMAGE_CONTAINER.to_string(),
-                format!("{}/{}", folder, name),
-            )
-            .put_block_blob(data)
-            .content_type(content_type)
-            .await
-            .map(|_| ())?)
-    }
+        container: String,
+        prefix: Option<String>,
+    ) -> Result<Vec<BlobMetaData>, Error>;
+    async fn create_or_update(
+        &self,
+        container: String,
+        meta: BlobMetaDto,
+        data: &[u8],
+    ) -> Result<String, Error>;
+    async fn delete(&self, container: String, pattern: String) -> Result<usize, Error>;
+}
 
-    async fn delete(&self, container: String, pattern: String) -> Result<usize, Error> {
-        Ok(self
-            .client
+#[async_trait]
+impl AzureBlobService for ClientBuilder {
+    async fn get(&self, container: String, filename: String) -> Result<BlobMetaData, Error> {
+        let mut stream = self
             .clone()
             .blob_service_client()
             .container_client(container.clone())
             .list_blobs()
-            .prefix(pattern)
-            .into_stream()
-            .fold(Result::<_, Error>::Ok(0), |acc, resp| {
-                let container = container.clone();
-                async move {
-                    let mut count = acc?;
-                    for blob in resp?.blobs.blobs().cloned() {
-                        self.client
-                            .clone()
-                            .blob_client(container.clone(), blob.name)
-                            .delete()
-                            .await?;
-                        count += 1;
-                    }
-                    Ok(count)
-                }
-            })
-            .await?)
-    }
-
-    pub async fn delete_img(&self, pattern: String) -> Result<usize, Error> {
-        Self::delete(self, Self::IMAGE_CONTAINER.to_string(), pattern).await
-    }
-
-    pub async fn delete_blog_post(&self, id: &String, lang: &Country) -> Result<usize, Error> {
-        Self::delete(
-            self,
-            Self::BLOG_CONTAINER.to_string(),
-            format!("{}/{}.md", id, lang.key()),
-        )
-        .await
-    }
-
-    const BLOG_CONTAINER: &str = "blog";
-    pub async fn get_blog_meta(&self, id: &String, lang: &Country) -> Result<BlogMetaData, Error> {
-        let mut stream = self
-            .client
-            .clone()
-            .blob_service_client()
-            .container_client(Self::BLOG_CONTAINER.to_string())
-            .list_blobs()
-            .prefix(format!("{}/{}.md", id, lang.key()))
+            .prefix(filename.clone())
             .include_metadata(true)
             .include_tags(true)
             .include_versions(true)
             .into_stream();
         let mut versions = Vec::new();
         while let Some(resp) = stream.next().await {
-            for blob in resp?.blobs.blobs().cloned() {
+            for blob in resp?
+                .blobs
+                .blobs()
+                .filter(|b| &b.name == &filename)
+                .cloned()
+            {
                 versions.push(blob);
             }
         }
@@ -158,18 +58,18 @@ impl AzureBlobService {
             .min_by(|x, y| x.properties.creation_time.cmp(&y.properties.creation_time))
             .map(|b| b.properties.creation_time)
             .unwrap();
-        BlogMetaData::try_from(curr)
+        BlobMetaData::try_from(&curr)
     }
 
-    pub async fn get_all_blog_meta(
+    async fn get_all(
         &self,
+        container: String,
         prefix: Option<String>,
-    ) -> Result<Vec<BlogMetaData>, Error> {
+    ) -> Result<Vec<BlobMetaData>, Error> {
         let mut builder = self
-            .client
             .clone()
             .blob_service_client()
-            .container_client(Self::BLOG_CONTAINER.to_string())
+            .container_client(container.clone())
             .list_blobs()
             .include_metadata(true)
             .include_tags(true)
@@ -181,6 +81,7 @@ impl AzureBlobService {
         let mut result = HashMap::new();
         while let Some(resp) = stream.next().await {
             for blob in resp?.blobs.blobs().cloned() {
+                // println!("resp: {:?}", &blob.name);
                 result
                     .entry(blob.name.clone())
                     .or_insert(vec![blob.clone()])
@@ -207,34 +108,75 @@ impl AzureBlobService {
                     .min_by(|x, y| x.properties.creation_time.cmp(&y.properties.creation_time))
                     .map(|b| b.properties.creation_time)
                     .unwrap();
+                // println!("current: {:?}", &curr_blob.name);
                 curr_blob
             })
-            .filter_map(|blob| BlogMetaData::try_from(blob).ok())
+            .filter_map(|blob| {
+                BlobMetaData::try_from(&blob)
+                    .map_err(|e| {
+                        println!("{:?}", &e);
+                        e
+                    })
+                    .ok()
+            })
             .collect())
     }
 
-    pub async fn create_or_update_blog_post(
+    async fn create_or_update(
         &self,
-        id: &String,
-        lang: &Country,
-        value: &BlogData,
-    ) -> Result<(), Error> {
-        let lang = lang.key().to_string();
-        let meta: Metadata = value.meta.clone().into();
-        let tags: Tags = value.meta.tags.clone().into();
-        Ok(self
-            .client
+        container: String,
+        meta: BlobMetaDto,
+        data: &[u8],
+    ) -> Result<String, Error> {
+        let filename = match meta.filename.ends_with("/") {
+            true => format!(
+                "{}{}{}",
+                meta.filename,
+                uuid::Uuid::new_v4(),
+                meta.content_type
+                    .split('/')
+                    .last()
+                    .map(|ext| format!(".{}", ext))
+                    .unwrap_or_default()
+            ),
+            _ => meta.filename.clone(),
+        };
+        let mut builder = self
             .clone()
-            .blob_client(
-                Self::BLOG_CONTAINER.to_string(),
-                format!("{}/{}.md", id, &lang),
-            )
-            .put_block_blob(value.content.as_bytes().to_vec())
-            .metadata(meta)
-            .tags(tags)
-            .content_type("text/markdown; charset=utf-8")
-            .content_language(lang)
-            .await
-            .map(|_| ())?)
+            .blob_client(container, filename.clone())
+            .put_block_blob(data.to_vec())
+            .metadata(Metadata::from(&meta.metadata))
+            .tags(Tags::from(meta.tags.clone()))
+            .content_type(meta.content_type.clone());
+        if let Some(content_language) = meta.content_language {
+            builder = builder.content_language(content_language);
+        }
+        builder.await?;
+        Ok(filename)
+    }
+
+    async fn delete(&self, container: String, pattern: String) -> Result<usize, Error> {
+        Ok(self
+            .clone()
+            .blob_service_client()
+            .container_client(container.clone())
+            .list_blobs()
+            .prefix(pattern)
+            .into_stream()
+            .fold(Result::<_, Error>::Ok(0), |acc, resp| {
+                let container = container.clone();
+                async move {
+                    let mut count = acc?;
+                    for blob in resp?.blobs.blobs().cloned() {
+                        self.clone()
+                            .blob_client(container.clone(), blob.name)
+                            .delete()
+                            .await?;
+                        count += 1;
+                    }
+                    Ok(count)
+                }
+            })
+            .await?)
     }
 }

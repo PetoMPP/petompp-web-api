@@ -1,5 +1,6 @@
 [default.limits]
 form = "64 kB"
+bytes = "20 MiB"
 json = "1 MiB"
 msgpack = "2 MiB"
 file = "20 MiB"
