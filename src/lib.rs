@@ -1,20 +1,19 @@
 use crate::controllers::controller::ControllerRegisterer;
 use crate::controllers::users::UsersController;
-use controllers::blog::BlogController;
-use controllers::image::ImageController;
-use controllers::resources::ResourcesController;
+use azure_storage_blobs::prelude::ClientBuilder;
 use controllers::user_settings::UserSettingsController;
+use controllers::{blob::BlobController, resources::ResourcesController};
 use diesel::{
     r2d2::{ConnectionManager, Pool},
     PgConnection,
 };
+use models::azure::AzureBlobSecrets;
 use petompp_web_models::{error::Error, models::api_response::ApiResponse};
 use repositories::{
     resources::repo::ResourcesRepo, user::repo::UserRepo, user_settings::repo::UserSettingsRepo,
 };
 use rocket::{catch, http::Status, serde::json::Json, Build, Rocket};
 use rocket::{catchers, Request};
-use services::azure_blob::{AzureBlobSecrets, AzureBlobService};
 use std::env;
 
 pub mod auth;
@@ -49,15 +48,11 @@ pub fn build_rocket(secrets: &Secrets, pg_pool: &'static PgPool) -> Rocket<Build
         .allow_credentials(true)
         .to_cors()
         .unwrap();
-    let user_repo: &'static dyn UserRepo = pg_pool;
-    let resources_repo: &'static dyn ResourcesRepo = pg_pool;
-    let user_settings_repo: &'static dyn UserSettingsRepo = pg_pool;    
 
     rocket::build()
         .add(UsersController)
         .add(ResourcesController)
-        .add(ImageController)
-        .add(BlogController)
+        .add(BlobController)
         .add(UserSettingsController)
         .mount("/", rocket_cors::catch_all_options_routes())
         .register("/", catchers![err])
@@ -65,10 +60,10 @@ pub fn build_rocket(secrets: &Secrets, pg_pool: &'static PgPool) -> Rocket<Build
         .manage(cors)
         .manage(secrets.clone())
         .manage(pg_pool)
-        .manage(user_repo)
-        .manage(resources_repo)
-        .manage(user_settings_repo)
-        .manage(AzureBlobService::new(AzureBlobSecrets::default()))
+        .manage::<&'static dyn UserRepo>(pg_pool)
+        .manage::<&'static dyn ResourcesRepo>(pg_pool)
+        .manage::<&'static dyn UserSettingsRepo>(pg_pool)
+        .manage::<ClientBuilder>(AzureBlobSecrets::default().into())
 }
 
 pub fn get_connection_pool(secrets: &Secrets) -> PgPool {
