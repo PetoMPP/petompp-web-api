@@ -27,10 +27,17 @@ pub trait AzureBlobService {
 #[async_trait]
 impl AzureBlobService for ClientBuilder {
     async fn get(&self, container: String, filename: String) -> Result<BlobMetaData, Error> {
-        let mut stream = self
+        let container_client = self
             .clone()
             .blob_service_client()
-            .container_client(container.clone())
+            .container_client(container.clone());
+        if !container_client.exists().await? {
+            return Err(Error::Status(
+                Status::NotFound.code,
+                Status::NotFound.to_string(),
+            ));
+        }
+        let mut stream = container_client
             .list_blobs()
             .prefix(filename.clone())
             .include_metadata(true)
@@ -39,12 +46,7 @@ impl AzureBlobService for ClientBuilder {
             .into_stream();
         let mut versions = Vec::new();
         while let Some(resp) = stream.next().await {
-            for blob in resp?
-                .blobs
-                .blobs()
-                .filter(|b| b.name == filename)
-                .cloned()
-            {
+            for blob in resp?.blobs.blobs().filter(|b| b.name == filename).cloned() {
                 versions.push(blob);
             }
         }
@@ -66,10 +68,17 @@ impl AzureBlobService for ClientBuilder {
         container: String,
         prefix: Option<String>,
     ) -> Result<Vec<BlobMetaData>, Error> {
-        let mut builder = self
+        let container_client = self
             .clone()
             .blob_service_client()
-            .container_client(container.clone())
+            .container_client(container.clone());
+        if !container_client.exists().await? {
+            return Err(Error::Status(
+                Status::NotFound.code,
+                Status::NotFound.to_string(),
+            ));
+        }
+        let mut builder = container_client
             .list_blobs()
             .include_metadata(true)
             .include_tags(true)
@@ -81,7 +90,6 @@ impl AzureBlobService for ClientBuilder {
         let mut result = HashMap::new();
         while let Some(resp) = stream.next().await {
             for blob in resp?.blobs.blobs().cloned() {
-                // println!("resp: {:?}", &blob.name);
                 result
                     .entry(blob.name.clone())
                     .or_insert(vec![blob.clone()])
@@ -108,7 +116,6 @@ impl AzureBlobService for ClientBuilder {
                     .min_by(|x, y| x.properties.creation_time.cmp(&y.properties.creation_time))
                     .map(|b| b.properties.creation_time)
                     .unwrap();
-                // println!("current: {:?}", &curr_blob.name);
                 curr_blob
             })
             .filter_map(|blob| {
@@ -141,9 +148,15 @@ impl AzureBlobService for ClientBuilder {
             ),
             _ => meta.filename.clone(),
         };
-        let mut builder = self
+        let container_client = self
             .clone()
-            .blob_client(container, filename.clone())
+            .blob_service_client()
+            .container_client(container);
+        if !container_client.exists().await? {
+            container_client.create().await?;
+        }
+        let mut builder = container_client
+            .blob_client(filename.clone())
             .put_block_blob(data.to_vec())
             .metadata(Metadata::from(&meta.metadata))
             .tags(Tags::from(meta.tags.clone()))
