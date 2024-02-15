@@ -1,5 +1,5 @@
 use super::controller::Controller;
-use crate::services::azure_blob::AzureBlobService;
+use crate::{auth::claims::AdminClaims, services::azure_blob::AzureBlobService};
 use azure_storage_blobs::prelude::ClientBuilder;
 use petompp_web_models::{
     error::ApiError,
@@ -101,6 +101,7 @@ struct BlobUploadForm<'a> {
 
 #[post("/<container>", data = "<value>")]
 async fn create_or_update<'a>(
+    _admin_claims: AdminClaims,
     container: &'a str,
     blob_service: &'a State<ClientBuilder>,
     value: Form<BlobUploadForm<'a>>,
@@ -114,6 +115,7 @@ async fn create_or_update<'a>(
 
 #[delete("/<container>/<prefix..>")]
 async fn delete<'a>(
+    _admin_claims: AdminClaims,
     container: &'a str,
     prefix: Segments<'a, Path>,
     blob_service: &'a State<ClientBuilder>,

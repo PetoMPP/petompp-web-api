@@ -19,9 +19,7 @@ impl Controller for UserSettingsController {
 }
 
 #[get("/")]
-async fn get(
-    pool: &dyn UserSettingsRepo,
-) -> Result<Json<ApiResponse<UserSettingsDto>>, ApiError> {
+async fn get(pool: &dyn UserSettingsRepo) -> Result<Json<ApiResponse<UserSettingsDto>>, ApiError> {
     let settings = pool.get()?;
     Ok(Json(ApiResponse::ok(settings.into())))
 }
